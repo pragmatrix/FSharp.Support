@@ -106,17 +106,23 @@ module private Implementation =
                 // nested (fun gp -> gp.Attributes)
                 // nested (fun gp -> gp.Constraints) 
             ]
+
+        let compareArrayType : FSharpType comparer =
+            members [
+                nested (fun t -> t.TypeDefinition.ArrayRank) compare
+                nestedIfD (fun t -> true) (fun t -> t.GenericArguments) (fun () -> ordered compareType)
+            ]
         
         let compareTypeDefinition : FSharpEntity comparer = 
             members [
-                // arrays do not return a full name
-                nestedIf (fun t -> t.IsArrayType) (fun t -> t.ArrayRank) compare
+                // note: arrays do not return a full name
                 nested (fun t -> t.TryFullName) compare
             ]
 
         members [
             nestedIf (fun t -> t.HasTypeDefinition) (fun t -> t.TypeDefinition) compareTypeDefinition
             nestedIfD (fun t -> t.IsTupleType) (fun t -> t.GenericArguments) (fun () -> ordered compareType)
+            nestedIfD (fun t -> t.HasTypeDefinition && t.TypeDefinition.IsArrayType) id (fun () -> compareArrayType)
             nestedIfD (fun t -> t.IsAbbreviation) (fun t -> t.AbbreviatedType) (fun () -> compareType)
             nestedIf (fun t -> t.IsGenericParameter) (fun t -> t.GenericParameter) compareGenericParameterReference
         ]
@@ -219,7 +225,7 @@ module private Implementation =
 
     let compareMember : FSharpMemberOrFunctionOrValue comparer = 
         members<FSharpMemberOrFunctionOrValue> [
-            nested (fun e -> Debugger.Break(); e.GenericParameters) compareGenericParameterDeclarations
+            nested (fun e -> e.GenericParameters) compareGenericParameterDeclarations
             nested (fun e -> e.FullType) compareType
             nested (fun e -> e.InlineAnnotation) compare
             nested (fun e -> e.IsMutable) compare

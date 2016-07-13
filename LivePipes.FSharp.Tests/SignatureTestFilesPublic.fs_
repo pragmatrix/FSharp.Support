@@ -40,9 +40,9 @@ let x (a: 'a) = a
 // !=
 let x (b: 'a when 'a : null) = b
 // --
-// generic function with different generic parameter names (also would require a generic parameter name normalization)
+// generic function with different generic parameter names
 let x (a: 'a) = a
-// !=
+// ==
 let x (b: 'b) = b
 // --
 // class constructor parameter name
