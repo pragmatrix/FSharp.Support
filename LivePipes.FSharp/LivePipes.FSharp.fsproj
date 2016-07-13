@@ -44,8 +44,10 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="SignatureComparer.fs" />
     <Compile Include="Signature.fs" />
     <Compile Include="SignatureFormatter.fs" />
+    <Compile Include="SignatureRenderer.fs" />
   </ItemGroup>
   <PropertyGroup>
     <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>

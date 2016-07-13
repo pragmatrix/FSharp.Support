@@ -1,7 +1,13 @@
-﻿// function inline 
-let f x = x * x
+﻿// todo: namespaces
+// arrays of different types
+let a = [|0|]
 // !=
-let inline f x = x * x
+let a = [|"a"|]
+// --
+// union with same types but different order
+type U = A of x:int * y:int
+// !=
+type U = A of y:int * x:int
 // --
 // generic union (note, these could be equal, but then we need to normalize / indexify 
 // generic parameter names). 
@@ -9,20 +15,20 @@ type U<'a> = A of 'a
 // !=
 type U<'b> = A of 'b
 // --
-// union with same types but different order
-type U = A of x:int * y:int
+// generic function with different parameter names
+let x a = a
+// ==
+let x b = b
+// --
+// function inline 
+let f x = x * x
 // !=
-type U = A of y:int * x:int
+let inline f x = x * x
 // --
 // union with different field names
 type U = A of x:int
 // !=
 type U = A of y:int
-// --
-// arrays of different types
-let a = [|0|]
-// !=
-let a = [|"a"|]
 // --
 // rank 1 & 2 arrays of the same type
 let a = [|0|]
@@ -38,11 +44,6 @@ let x (b: 'a when 'a : null) = b
 let x (a: 'a) = a
 // !=
 let x (b: 'b) = b
-// --
-// generic function with different parameter names
-let x a = a
-// ==
-let x b = b
 // --
 // class constructor parameter name
 type X(x:int) = class end

@@ -4,24 +4,7 @@ open System
 open System.IO
 open FsUnit
 open Xunit
-open Microsoft.FSharp.Compiler.SourceCodeServices
 open LivePipes.FSharp
-
-let checker = FSharpChecker.Create(keepAssemblyContents = true)
-
-let projectOptions = 
-    let file = Path.GetFullPath("Main.fsx")
-
-    File.WriteAllText(file, "")
-    // Get context representing a stand-alone (script) file
-    checker.GetProjectOptionsFromScript(file, "Main.fsx")
-    |> Async.RunSynchronously
-
-let parseAndCheckSingleFile input = 
-    let po = projectOptions
-    File.WriteAllText("Main.fsx", input)
-    checker.ParseAndCheckProject(po) 
-    |> Async.RunSynchronously
 
 type CompareCommand =
     | Equal
@@ -39,24 +22,31 @@ let makeCommand (str: string) =
     | [|a;b|] -> (NotEqual, a, b) |> CompareInst
     | _ -> failwithf "failed to find // == or // != in %A" str  
 
-let compare (CompareInst(cmd, a, b)) = 
+let compare (CompareInst(cmd, a, b) as inst) = 
     let accessibility = Signature.Public
 
     let getSigFromFile file =
         let projectResults = parseAndCheckSingleFile file
         if projectResults.Errors.Length <> 0 then
             failwithf "found errors or warningn: %A" projectResults.Errors
-        let implementationFiles = projectResults.AssemblyContents.ImplementationFiles
-        implementationFiles.Length |> should equal 1
-        Signature.create accessibility implementationFiles.[0]
-
+        projectResults.AssemblySignature
+        
     let sigA = a |> getSigFromFile
     let sigB = b |> getSigFromFile
-    printfn "%s" <| sprintf "sigA: %A" sigA
-    printfn "sigB: %A" sigB
+    printfn "%A" (a.Trim())
+    printfn "%A" cmd
+    printfn "%A" (b.Trim())
+
+    let declarationFilter (path: SignatureComparer.Path) (declaration : SignatureComparer.Declaration) = 
+        let indent = String.replicate (path.Length) "  "
+        printfn "%sPath: %A:" indent path
+        printfn "%s%A" indent declaration
+        true
+
+    let result = SignatureComparer.compareAssemblySignature { DeclarationFilter = declarationFilter } (sigA, sigB)
     match cmd with
-    | Equal -> sigA |> should equal sigB
-    | NotEqual -> sigA |> should not' (equal sigB)
+    | Equal -> result |> should be True
+    | NotEqual -> result |> should be False
 
 [<Fact>]
 let testAll() =

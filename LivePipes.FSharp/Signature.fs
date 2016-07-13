@@ -481,7 +481,6 @@ let create visibility (checkedFile: FSharpImplementationFileContents) : Declarat
     |> List.choose (fromDeclaration visibility)
     |> LSet.ofList
 
-
     
 
 

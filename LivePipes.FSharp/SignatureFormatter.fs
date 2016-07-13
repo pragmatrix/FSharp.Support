@@ -1,5 +1,7 @@
 ﻿module LivePipes.FSharp.SignatureFormatter
 
+#if false
+
 open LivePipes.FSharp.Signature
 
 type Context = {
@@ -12,6 +14,7 @@ with
             Path = entity :: this.Path
             Level = this.Level + 1
         }
+    member this.IsRoot = List.isEmpty this.Path
     static member Root = { Path = []; Level = 0 }
 
 type FormattedSignature =
@@ -62,7 +65,7 @@ and formatEntity (c: Context) (entity: EntitySignature) : FormattedSignature =
     | Module -> 
         ent 
             c 
-            (sprintf "module %s =" entity.Name) 
+            (sprintf "module %s%s" entity.Name (if c.IsRoot then "" else " ="))
             (formatDeclarations (c.Push entity) entity.Nested)
     | Abbrevation t ->
         ent
@@ -83,3 +86,4 @@ and formatMember (c: Context) (m: MemberSignature) =
 
 
 
+#endif
