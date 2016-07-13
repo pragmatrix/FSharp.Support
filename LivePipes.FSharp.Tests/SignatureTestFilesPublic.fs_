@@ -1,4 +1,4 @@
-﻿// todo: namespaces
+﻿// todo: namespaces, functions with different types
 // type abbrevation (points to same type via a abbrevation or a qualified name)
 type A = int
 // ==

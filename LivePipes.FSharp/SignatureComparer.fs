@@ -41,9 +41,12 @@ module private Implementation =
             let filter = declConstructor >> filter path
             comparer (Seq.filter filter lseq, Seq.filter filter rseq)
 
-    let nested get comparer = 
+    let nestedD get comparer = 
         fun (enclosingL, enclosingR) ->
-            comparer (get enclosingL, get enclosingR)
+            comparer() (get enclosingL, get enclosingR)
+
+    let nested get comparer = 
+        nestedD get (fun () -> comparer)
 
     let inline (<&>) pl pr v = if pl v then pr v else false
 
@@ -110,15 +113,34 @@ module private Implementation =
         let compareArrayType : FSharpType comparer =
             members [
                 nested (fun t -> t.TypeDefinition.ArrayRank) compare
-                nestedIfD (fun t -> true) (fun t -> t.GenericArguments) (fun () -> ordered compareType)
+                nestedD (fun t -> t.GenericArguments) (fun () -> ordered compareType)
             ]
         
-        let compareTypeDefinition : FSharpEntity comparer = 
-            members [
-                // note: arrays do not return a full name
-                nested (fun t -> t.TryFullName) compare
-            ]
-
+        let rec findAbbreviatedType (t: FSharpType) =
+            if t.IsAbbreviation 
+            then findAbbreviatedType t.AbbreviatedType
+            else t
+            
+        fun ((l, r) as p) ->
+            // first find the real types, if they are abbreviated
+            let l, r = findAbbreviatedType l, findAbbreviatedType r
+            match () with
+            | _ when l.IsTupleType && r.IsTupleType -> 
+                p 
+                |> nestedD (fun t -> t.GenericArguments) (fun () -> ordered compareType)
+            | _ when l.IsGenericParameter && r.IsGenericParameter ->
+                p |> nested (fun t -> t.GenericParameter) compareGenericParameterReference                
+            // now we must have a type definition
+            | _ when l.HasTypeDefinition && r.HasTypeDefinition ->
+                let ltd, rtd = l.TypeDefinition, r.TypeDefinition
+                if ltd.IsArrayType && rtd.IsArrayType then
+                    p |> compareArrayType
+                else
+                let lfn, rfn = ltd.TryFullName, rtd.TryFullName
+                if lfn.IsNone || rfn.IsNone then false
+                else lfn.Value = rfn.Value
+            | _ -> false
+(*
         members [
             nestedIf (fun t -> t.HasTypeDefinition) (fun t -> t.TypeDefinition) compareTypeDefinition
             nestedIfD (fun t -> t.IsTupleType) (fun t -> t.GenericArguments) (fun () -> ordered compareType)
@@ -126,6 +148,7 @@ module private Implementation =
             nestedIfD (fun t -> t.IsAbbreviation) (fun t -> t.AbbreviatedType) (fun () -> compareType)
             nestedIf (fun t -> t.IsGenericParameter) (fun t -> t.GenericParameter) compareGenericParameterReference
         ]
+*)
 
     type ConstructorArgument = FSharpType * obj
     type NamedArgument = FSharpType * string * bool (*isField*) * obj (*value*)
