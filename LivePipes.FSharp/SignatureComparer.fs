@@ -338,7 +338,9 @@ module private Implementation =
             nested (fun e -> e.Accessibility) compareAccessibility
 
             nested (fun e -> e.CompiledName) compare
-            nested (fun e -> e.FullName) compare
+            // don't need to compare the full name, because we have compared parents before,
+            // also type abbrevations do not have a FullName
+            // nested (fun e -> e.FullName) compare
             nested (fun e -> e.GenericParameters) (compareGenericParameterDeclarations)
             nestedIf (fun e -> e.IsFSharpModule) id compareModule
             nestedIf (fun e -> e.IsArrayType) (fun e -> e.ArrayRank) compare

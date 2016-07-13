@@ -1,4 +1,9 @@
 ﻿// todo: namespaces
+// type abbrevation (points to same type via a abbrevation or a qualified name)
+type A = int
+// ==
+type A = System.Int32
+// --
 // arrays of different types
 let a = [|0|]
 // !=
@@ -71,11 +76,6 @@ let a = 0
 let a = 0
 // ==
 let a = 1
-// --
-// type abbrevation (points to same type via a abbrevation or a qualified name)
-type A = int
-// ==
-type A = System.Int32
 // --
 // type abbrevation
 type A = int
