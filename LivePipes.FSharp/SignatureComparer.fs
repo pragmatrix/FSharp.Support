@@ -127,9 +127,9 @@ module private Implementation =
             then skipAbbreviatedType t.AbbreviatedType
             else t
             
-        fun (l, r) ->
+        fun (l_, r_) ->
             // first find the real types, if they are abbreviated
-            let (l, r) as p = skipAbbreviatedType l, skipAbbreviatedType r
+            let (l, r) as p = skipAbbreviatedType l_, skipAbbreviatedType r_
             match () with
             | _ when l.IsTupleType && r.IsTupleType || l.IsFunctionType && r.IsFunctionType -> 
                 p 
@@ -335,9 +335,9 @@ module private Implementation =
                 nested (fun f -> f.IsDefaultValue) compare
                 nested (fun f -> f.FieldType) compareType
                 nested (fun f -> f.IsStatic) compare
-                nested (fun f -> f.FieldAttributes) compare
-                nested (fun f -> f.PropertyAttributes) compare
-                nested (fun f -> f.Accessibility) compare
+                nested (fun f -> f.FieldAttributes) compareAttributes
+                nested (fun f -> f.PropertyAttributes) compareAttributes
+                nested (fun f -> f.Accessibility) compareAccessibility
             ]
 
         let compareRecordFields : FSharpEntity comparer =
@@ -345,6 +345,11 @@ module private Implementation =
                 nested (fun e -> e.FSharpFields) (unordered<FSharpField> (fun f -> f.Name) compareField |> filter Field context)
             ]
         
+        let compareEnumFields: FSharpEntity comparer =
+            members [
+                nested (fun e -> e.FSharpFields) (unordered<FSharpField> (fun f -> f.Name) compareField |> filter Field context)
+            ]
+
         let compareUnionCases : FSharpEntity comparer =
 
             let compareCase : FSharpUnionCase comparer =
@@ -375,7 +380,7 @@ module private Implementation =
             nestedIf (fun e -> e.IsArrayType) (fun e -> e.ArrayRank) compare
             nested (fun e -> e.IsByRef) compare
 
-            nested (fun e -> e.IsEnum) compare
+            nestedIf (fun e -> e.IsEnum) id compareEnumFields
             // ValueType is always set when IsEnum is true
             nestedIf (fun e -> e.IsValueType) id (compareMembers <&> compareDeclaredInterfaces)
 
