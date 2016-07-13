@@ -113,21 +113,27 @@ module private Implementation =
         let compareArrayType : FSharpType comparer =
             members [
                 nested (fun t -> t.TypeDefinition.ArrayRank) compare
-                nestedD (fun t -> t.GenericArguments) (fun () -> ordered compareType)
+                nestedD (fun t -> t.GenericArguments |> FSharpType.Prettify) (fun () -> ordered compareType)
+            ]
+
+        let compareNamedType : FSharpType comparer =
+            members [
+                nested (fun t -> t.TypeDefinition.FullName) compare
+                nestedD (fun t -> t.GenericArguments |> FSharpType.Prettify) (fun () -> ordered compareType)
             ]
         
-        let rec findAbbreviatedType (t: FSharpType) =
+        let rec skipAbbreviatedType (t: FSharpType) =
             if t.IsAbbreviation 
-            then findAbbreviatedType t.AbbreviatedType
+            then skipAbbreviatedType t.AbbreviatedType
             else t
             
         fun ((l, r) as p) ->
             // first find the real types, if they are abbreviated
-            let l, r = findAbbreviatedType l, findAbbreviatedType r
+            let l, r = skipAbbreviatedType l, skipAbbreviatedType r
             match () with
-            | _ when l.IsTupleType && r.IsTupleType -> 
+            | _ when l.IsTupleType && r.IsTupleType || l.IsFunctionType && r.IsFunctionType -> 
                 p 
-                |> nestedD (fun t -> t.GenericArguments) (fun () -> ordered compareType)
+                |> nestedD (fun t -> t.GenericArguments |> FSharpType.Prettify) (fun () -> ordered compareType)
             | _ when l.IsGenericParameter && r.IsGenericParameter ->
                 p |> nested (fun t -> t.GenericParameter) compareGenericParameterReference                
             // now we must have a type definition
@@ -138,7 +144,7 @@ module private Implementation =
                 else
                 let lfn, rfn = ltd.TryFullName, rtd.TryFullName
                 if lfn.IsNone || rfn.IsNone then false
-                else lfn.Value = rfn.Value
+                else p |> compareNamedType
             | _ -> false
 (*
         members [
