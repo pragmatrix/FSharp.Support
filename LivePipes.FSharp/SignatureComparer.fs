@@ -65,8 +65,8 @@ module private Implementation =
     let nestedIf getB getValue comparer =
         nestedIfD getB getValue (fun () -> comparer)
 
-    // build a member comparer that compares all members of a type in the order specified.
-    let members<'a> (nested: 'a comparer list) : 'a comparer =
+    // build a comparer that compares in the order specified.
+    let sequence<'a> (nested: 'a comparer list) : 'a comparer =
         fun pair ->
             nested
             |> List.forall (fun c -> c pair)
@@ -97,11 +97,11 @@ module private Implementation =
 
     let inline compare (a, b) = a = b
 
-    let mutable compareType : FSharpType comparer = members []
+    let mutable compareType : FSharpType comparer = sequence []
     compareType <-
 
         let compareGenericParameterReference : FSharpGenericParameter comparer =
-            members [
+            sequence [
                 nested (fun gp -> gp.Name) compare
                 // nested (fun gp -> gp.IsCompilerGenerated) compare
                 nested (fun gp -> gp.IsMeasure) compare
@@ -111,13 +111,13 @@ module private Implementation =
             ]
 
         let compareArrayType : FSharpType comparer =
-            members [
+            sequence [
                 nested (fun t -> t.TypeDefinition.ArrayRank) compare
                 nestedD (fun t -> t.GenericArguments |> FSharpType.Prettify) (fun () -> ordered compareType)
             ]
 
         let compareNamedType : FSharpType comparer =
-            members [
+            sequence [
                 nested (fun t -> t.TypeDefinition.FullName) compare
                 nestedD (fun t -> t.GenericArguments |> FSharpType.Prettify) (fun () -> ordered compareType)
             ]
@@ -132,29 +132,20 @@ module private Implementation =
             let (l, r) as p = skipAbbreviatedType l_, skipAbbreviatedType r_
             match () with
             | _ when l.IsTupleType && r.IsTupleType || l.IsFunctionType && r.IsFunctionType -> 
-                p 
-                |> nestedD (fun t -> t.GenericArguments |> FSharpType.Prettify) (fun () -> ordered compareType)
+                p |> nestedD 
+                    (fun t -> t.GenericArguments |> FSharpType.Prettify) 
+                    (fun () -> ordered compareType)
             | _ when l.IsGenericParameter && r.IsGenericParameter ->
                 p |> nested (fun t -> t.GenericParameter) compareGenericParameterReference                
             // now we must have a type definition
             | _ when l.HasTypeDefinition && r.HasTypeDefinition ->
-                let ltd, rtd = l.TypeDefinition, r.TypeDefinition
-                if ltd.IsArrayType && rtd.IsArrayType then
+                match l.TypeDefinition, r.TypeDefinition with
+                | l, r when l.IsArrayType && r.IsArrayType ->
                     p |> compareArrayType
-                else
-                let lfn, rfn = ltd.TryFullName, rtd.TryFullName
-                if lfn.IsNone || rfn.IsNone then false
-                else p |> compareNamedType
+                | l, r when l.TryFullName.IsSome && r.TryFullName.IsSome->
+                    p |> compareNamedType
+                | _ -> false
             | _ -> false
-(*
-        members [
-            nestedIf (fun t -> t.HasTypeDefinition) (fun t -> t.TypeDefinition) compareTypeDefinition
-            nestedIfD (fun t -> t.IsTupleType) (fun t -> t.GenericArguments) (fun () -> ordered compareType)
-            nestedIfD (fun t -> t.HasTypeDefinition && t.TypeDefinition.IsArrayType) id (fun () -> compareArrayType)
-            nestedIfD (fun t -> t.IsAbbreviation) (fun t -> t.AbbreviatedType) (fun () -> compareType)
-            nestedIf (fun t -> t.IsGenericParameter) (fun t -> t.GenericParameter) compareGenericParameterReference
-        ]
-*)
 
     type ConstructorArgument = FSharpType * obj
     type NamedArgument = FSharpType * string * bool (*isField*) * obj (*value*)
@@ -164,7 +155,7 @@ module private Implementation =
         let compareAttribute : FSharpAttribute comparer = 
 
             let compareConstructorArgument = 
-                members<ConstructorArgument> [
+                sequence<ConstructorArgument> [
                     nested (fun (t, _) -> t) compareType
                     nested (fun (_, v) -> v) compare
                 ]
@@ -173,7 +164,7 @@ module private Implementation =
                 ordered compareConstructorArgument
 
             let compareNamedArgument = 
-                members<NamedArgument> [
+                sequence<NamedArgument> [
                     nested (fun (t, _ , _, _) -> t) compareType
                     nested (fun (_, n , _, _) -> n) compare
                     nested (fun (_, _ , _, v) -> v) compare
@@ -181,7 +172,7 @@ module private Implementation =
             let compareNamedArguments = 
                 unordered (fun (_, name, _, _)-> name) compareNamedArgument
 
-            members [
+            sequence [
                 nested (fun a -> a.AttributeType.FullName) compare
                 nested (fun a -> a.ConstructorArguments) compareConstructorArguments
                 nested (fun a -> a.NamedArguments) compareNamedArguments
@@ -194,13 +185,13 @@ module private Implementation =
         let compareGenericParameterConstraint : FSharpGenericParameterConstraint comparer =
 
             let compareDefaultsToConstraint : FSharpGenericParameterDefaultsToConstraint comparer =
-                members [
+                sequence [
                     nested (fun dtc -> dtc.DefaultsToPriority) compare
                     nested (fun dtc -> dtc.DefaultsToTarget) compareType
                 ]
 
             let compareMemberConstraint : FSharpGenericParameterMemberConstraint comparer =
-                members [
+                sequence [
                     nested (fun mc -> mc.MemberName) compare
                     nested (fun mc -> mc.MemberIsStatic) compare
                     nested (fun mc -> mc.MemberSources) (ordered compareType)
@@ -209,12 +200,12 @@ module private Implementation =
                 ]
 
             let compareDelegateConstraint : FSharpGenericParameterDelegateConstraint comparer =
-                members [
+                sequence [
                     nested (fun dc -> dc.DelegateTupledArgumentType) compareType
                     nested (fun dc -> dc.DelegateReturnType) compareType
                 ]
 
-            members [
+            sequence [
                 nestedIf (fun c -> c.IsCoercesToConstraint) (fun c -> c.CoercesToTarget) compareType
                 nestedIf (fun c -> c.IsDefaultsToConstraint) (fun c -> c.DefaultsToConstraintData) compareDefaultsToConstraint
                 nested (fun c -> c.IsSupportsNullConstraint) compare
@@ -234,7 +225,7 @@ module private Implementation =
             // probably unordered, but we can't sort them without a proper key
             ordered compareGenericParameterConstraint
 
-        members<FSharpGenericParameter> [
+        sequence<FSharpGenericParameter> [
             // names are not relevant, only depend on the order inside the entity declaration
             // (also these names might be compiler generated if IsCompilerGenerated is true)
             // nested (fun gp -> gp.Name) compare
@@ -248,12 +239,12 @@ module private Implementation =
         ordered compareGenericParameterDeclaration
 
     let compareAccessibility =
-        members<FSharpAccessibility> [
+        sequence<FSharpAccessibility> [
             nested (fun a -> a.IsInternal, a.IsPrivate, a.IsPublic) compare
         ]
 
     let compareMember : FSharpMemberOrFunctionOrValue comparer = 
-        members<FSharpMemberOrFunctionOrValue> [
+        sequence<FSharpMemberOrFunctionOrValue> [
             nested (fun e -> e.GenericParameters) compareGenericParameterDeclarations
             nested (fun e -> e.FullType) compareType
             nested (fun e -> e.InlineAnnotation) compare
@@ -280,19 +271,19 @@ module private Implementation =
     let compareEntity (context: Context) =
 
         let compareDelegateArgument =
-            members<string option * FSharpType>[
+            sequence<string option * FSharpType>[
                 nested fst compare
                 nested snd compareType
             ]
 
         let compareDelegateSignature = 
-            members<FSharpDelegateSignature> [
+            sequence<FSharpDelegateSignature> [
                 nested (fun ds -> ds.DelegateArguments) (ordered compareDelegateArgument)
                 nested (fun ds -> ds.DelegateReturnType) compareType
             ]
 
         let compareBaseType =
-            members<FSharpEntity> [
+            sequence<FSharpEntity> [
                 nestedIf (fun e -> e.BaseType.IsSome) (fun e -> e.BaseType.Value) compareType
             ]
 
@@ -301,32 +292,32 @@ module private Implementation =
                 unordered<FSharpMemberOrFunctionOrValue> (fun m -> m.CompiledName) compareMember
                 |> filter Member context
 
-            members<FSharpEntity> [
+            sequence<FSharpEntity> [
                 nested (fun e -> e.MembersFunctionsAndValues) compareMembers
             ]
 
         let compareDeclaredInterfaces =
-            members<FSharpEntity> [
+            sequence<FSharpEntity> [
                 nested 
                     (fun e -> e.DeclaredInterfaces) 
                     (unordered (fun t -> t.TypeDefinition.CompiledName) compareType)
             ]
     
-        let mutable compareEntity = members []
+        let mutable compareEntity = sequence []
 
         let compareNestedEntities =
             unorderedD<FSharpEntity> (fun e -> e.CompiledName) (fun () -> compareEntity)
             |> filter Entity context
 
         let compareModule : FSharpEntity comparer = 
-            members [
+            sequence [
                 nested (fun e -> e.HasFSharpModuleSuffix) compare
                 nested id compareMembers
                 nested (fun e -> e.NestedEntities) compareNestedEntities
             ]
 
         let compareField : FSharpField comparer =
-            members [
+            sequence [
                 nested (fun f -> f.Name) compare
 
                 nested (fun f -> f.IsMutable) compare
@@ -341,19 +332,19 @@ module private Implementation =
             ]
 
         let compareRecordFields : FSharpEntity comparer =
-            members [
+            sequence [
                 nested (fun e -> e.FSharpFields) (unordered<FSharpField> (fun f -> f.Name) compareField |> filter Field context)
             ]
         
         let compareEnumFields: FSharpEntity comparer =
-            members [
+            sequence [
                 nested (fun e -> e.FSharpFields) (unordered<FSharpField> (fun f -> f.Name) compareField |> filter Field context)
             ]
 
         let compareUnionCases : FSharpEntity comparer =
 
             let compareCase : FSharpUnionCase comparer =
-                members [
+                sequence [
                     nested (fun uc -> uc.Name) compare
                     nested (fun uc -> uc.UnionCaseFields) (ordered compareField |> filter Field context)
                     nested (fun uc -> uc.Attributes) compareAttributes
@@ -364,11 +355,11 @@ module private Implementation =
                 unordered<FSharpUnionCase> (fun uc -> uc.Name) compareCase
                 |> filter UnionCase context
 
-            members [
+            sequence [
                 nested (fun e -> e.UnionCases) compareCases
             ]
 
-        compareEntity <- members<FSharpEntity> [
+        compareEntity <- sequence<FSharpEntity> [
             nested (fun e -> e.Accessibility) compareAccessibility
 
             nested (fun e -> e.CompiledName) compare
@@ -408,7 +399,7 @@ module private Implementation =
 let compareAssemblySignature (v : Visitor) : FSharpAssemblySignature comparer = 
     let c = { Visitor = v; CurrentPath = [] }
     let compareEntities = compareEntities c
-    members [
+    sequence [
         nested (fun s -> s.Attributes) compareAttributes
         nested (fun s -> s.Entities) compareEntities
     ] 
