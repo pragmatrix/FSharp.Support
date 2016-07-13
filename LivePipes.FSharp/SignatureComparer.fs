@@ -127,9 +127,9 @@ module private Implementation =
             then skipAbbreviatedType t.AbbreviatedType
             else t
             
-        fun ((l, r) as p) ->
+        fun (l, r) ->
             // first find the real types, if they are abbreviated
-            let l, r = skipAbbreviatedType l, skipAbbreviatedType r
+            let (l, r) as p = skipAbbreviatedType l, skipAbbreviatedType r
             match () with
             | _ when l.IsTupleType && r.IsTupleType || l.IsFunctionType && r.IsFunctionType -> 
                 p 
