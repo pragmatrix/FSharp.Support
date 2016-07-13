@@ -1,0 +1,199 @@
+﻿// function inline 
+let f x = x * x
+// !=
+let inline f x = x * x
+// --
+// generic union (note, these could be equal, but then we need to normalize / indexify 
+// generic parameter names). 
+type U<'a> = A of 'a
+// !=
+type U<'b> = A of 'b
+// --
+// union with same types but different order
+type U = A of x:int * y:int
+// !=
+type U = A of y:int * x:int
+// --
+// union with different field names
+type U = A of x:int
+// !=
+type U = A of y:int
+// --
+// arrays of different types
+let a = [|0|]
+// !=
+let a = [|"a"|]
+// --
+// rank 1 & 2 arrays of the same type
+let a = [|0|]
+// !=
+let a = array2D [[1;0];[0;1]]
+// --
+// generic function with different generic parameter constraints
+let x (a: 'a) = a
+// !=
+let x (b: 'a when 'a : null) = b
+// --
+// generic function with different generic parameter names (also would require a generic parameter name normalization)
+let x (a: 'a) = a
+// !=
+let x (b: 'b) = b
+// --
+// generic function with different parameter names
+let x a = a
+// ==
+let x b = b
+// --
+// class constructor parameter name
+type X(x:int) = class end
+// ==
+type X(y:int) = class end
+// --
+// class constructor
+type X(x:int) = class end
+// !=
+type X = class end
+// --
+// mutable let value
+[<Literal>]
+let a = 0
+// !=
+let mutable a = 0
+// --
+// literal let value
+[<Literal>]
+let a = 0
+// !=
+let a = 0
+// --
+// simple let value
+let a = 0
+// ==
+let a = 1
+// --
+// type abbrevation (points to same type via a abbrevation or a qualified name)
+type A = int
+// ==
+type A = System.Int32
+// --
+// type abbrevation
+type A = int
+// !=
+type A = string
+// --
+// record with different member order
+type R = { x: int }
+  with
+  member this.value1 = ()
+// !=
+type R = { x: int }
+  with
+  static member value1 = ()
+// --
+// record with different member order
+type R = { x: int }
+  with
+  member this.value1 = ()
+  member this.value2 = ()
+// ==
+type R = { x: int }
+  with
+  member this.value2 = ()
+  member this.value1 = ()
+// --
+// record with different member
+type R = { x: int }
+  with
+  member this.value1 = ()
+// !=
+type R = { x: int }
+  with
+  member this.value2 = ()
+// --
+// record with member
+type R = { x: int }
+  with
+  member this.value = ()
+// ==
+type R = { x: int }
+  with
+  member this.value = ()
+// --
+// enum, flags and no flags
+open System
+[<Flags>]
+type E = A = 0
+// !=
+type E = A = 0
+// --
+// enum, same order, different values
+type E = | A = 0 | B = 1
+// !=
+type E = | A = 0 | B = 2
+// --
+// enum, different order, same values
+type E = | A = 0 | B = 1
+// ==
+type E = | B = 1 | A = 0
+// --
+// enum, additional value
+type E = | A = 0
+// !=
+type E = | A = 0 | B = 1
+// --
+// record, different types
+type R = { A: string; B: string }
+// !=
+type R = { A: int; B: string }
+// --
+// record, field order changed
+type R = { A: string; B: string }
+// ==
+type R = { B: string; A: string }
+// --
+// record, same
+type R = { A: string; B: string }
+// ==
+type R = { A: string; B: string }
+// --
+// union, same cases, but order changed
+type U = A | B
+// ==
+type U = B | A
+// --
+// union, different cases
+type U = A
+// !=
+type U = B
+// --
+// interface <> class
+type X = class end
+// !=
+type X = interface end
+// --
+// same type, but different attributes
+[<Sealed>]
+type X = class end
+// !=
+type X = class end
+// --
+module ModuleWithDifferentName
+// !=
+module ModuleWithDifferentName1
+// --
+type TypeWithSameNameAtRoot = class end
+// ==
+type TypeWithSameNameAtRoot = class end
+// --
+module ModuleWithSameName
+// ==
+module ModuleWithSameName
+// --
+module private ModulePrivateWithDifferentNames
+// ==
+module private ModulePrivateWithDifferentNames1
+// --
+module internal ModuleInternalWithDifferentNames
+// ==
+module internal ModuleInternalWithDifferentNames1
+
