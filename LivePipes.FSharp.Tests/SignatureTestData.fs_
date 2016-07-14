@@ -1,4 +1,44 @@
-﻿// measure, same definition
+﻿// measure, accessible value differs
+[<Measure>] type kg
+[<Measure>] type s
+[<Measure>] type g
+let gramsPerKilogram : float<g kg^-1> = 1000.0<g/kg>
+// !=
+[<Measure>] type kg
+[<Measure>] type s
+[<Measure>] type g
+let gramsPerKilogram : float<s kg^-1> = 1000.0<s/kg>
+// -- measure, accessible value is the same
+[<Measure>] type kg
+[<Measure>] type s
+[<Measure>] type g
+let gramsPerKilogram : float<g kg^-1> = 1000.0<g/kg>
+// ==
+[<Measure>] type kg
+[<Measure>] type s
+[<Measure>] type g
+let gramsPerKilogram : float<g kg^-1> = 1000.0<g/kg>
+// -- measure, newton, wrong defined
+[<Measure>] type kg
+[<Measure>] type m
+[<Measure>] type s
+[<Measure>] type N = kg m / s 
+// !=
+[<Measure>] type s
+[<Measure>] type m
+[<Measure>] type kg
+[<Measure>] type N = kg m / kg
+// -- measure, newton, ordered differently
+[<Measure>] type kg
+[<Measure>] type m
+[<Measure>] type s
+[<Measure>] type N = kg m / s 
+// ==
+[<Measure>] type s
+[<Measure>] type m
+[<Measure>] type kg
+[<Measure>] type N = kg m / s 
+// -- measure, same definition
 [<Measure>] type cm
 [<Measure>] type ml = cm^2
 // ==
