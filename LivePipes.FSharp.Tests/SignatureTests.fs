@@ -5,6 +5,7 @@ open System.IO
 open FsUnit
 open Xunit
 open LivePipes.FSharp
+open Microsoft.FSharp.Compiler.SourceCodeServices
 
 type CompareCommand =
     | Equal
@@ -49,7 +50,8 @@ let compare (CompareInst(cmd, a, b) as inst) =
     | NotEqual -> result |> should be False
 
 [<Fact>]
-let testAll() =
+let runMiniTests() =
+    clearCaches()
 
     let testFile fn = 
         let testFile = File.ReadAllText fn
@@ -77,3 +79,29 @@ let testAll() =
     |> List.map (fun s -> "SignatureTestData" + s + ".fs_")
     |> List.iter testFile
 
+[<Fact>]
+let compareDependenciesIncludingFSharpCore() =
+    clearCaches()
+    let results1 = parseAndCheckSingleFile "namespace Empty"
+    clearCaches()
+    let results2 = parseAndCheckSingleFile "namespace Empty"
+    
+    let assemblies1 = results1.ProjectContext.GetReferencedAssemblies()
+    let assemblies2 = results2.ProjectContext.GetReferencedAssemblies()
+
+    assemblies1.Length |> should equal assemblies2.Length
+
+    let compareAssemblySignatureWithItself (assemblies) =
+
+        let declarationFilter (path: SignatureComparer.Path) (declaration : SignatureComparer.Declaration) = 
+            let indent = String.replicate (path.Length) "  "
+            printfn "%sPath: %A:" indent path
+            printfn "%s%A" indent declaration
+            true
+
+        let r = SignatureComparer.compareAssemblySignature { DeclarationFilter = declarationFilter } assemblies
+        r |> should be True
+    
+    Seq.zip assemblies1 assemblies2
+    |> Seq.map (fun (l, r) -> l.Contents, r.Contents)
+    |> Seq.iter compareAssemblySignatureWithItself

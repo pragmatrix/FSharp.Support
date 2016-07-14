@@ -19,3 +19,6 @@ let parseAndCheckSingleFile input =
     File.WriteAllText("Main.fsx", input)
     checker.ParseAndCheckProject(po) 
     |> Async.RunSynchronously
+
+let clearCaches() = 
+    checker.ClearLanguageServiceRootCachesAndCollectAndFinalizeAllTransients()

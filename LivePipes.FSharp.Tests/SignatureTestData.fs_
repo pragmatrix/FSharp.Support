@@ -1,4 +1,13 @@
-﻿// enum, different base type
+﻿// overloads, different order
+type C() =
+    member this.A(x: int) = ()
+    member this.A(x: string) = ()
+// ==
+type C() =
+    member this.A(x: string) = ()
+    member this.A(x: int) = ()
+// -- enum, different base type
+open FSharp.Core
 type E = 
     | A = 0
 // !=
