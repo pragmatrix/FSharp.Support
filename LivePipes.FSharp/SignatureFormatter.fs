@@ -76,14 +76,4 @@ and formatEntity (c: Context) (entity: EntitySignature) : FormattedSignature =
 and formatMember (c: Context) (m: MemberSignature) = 
     mem c ""
 
-    
-    
-
-
-
-
-
-
-
-
 #endif

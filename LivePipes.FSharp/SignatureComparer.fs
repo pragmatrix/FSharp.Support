@@ -1,8 +1,7 @@
 ﻿module LivePipes.FSharp.SignatureComparer
 
-open System.Diagnostics
+open System.Collections.Generic
 open Microsoft.FSharp.Compiler.SourceCodeServices
-
 
 type Path = (FSharpEntity * FSharpEntity) list
 
@@ -72,17 +71,25 @@ module private Implementation =
             |> List.forall (fun c -> c pair)
 
     // compare a sequence ignoring the order. The key specifies the relation and must be unique.
-    let inline unorderedD<'a> key (comparer: unit -> 'a comparer) : 'a seq comparer =
+    let inline unorderedDWith<'a, 'k when 'k : comparison> (keyComparer: 'a -> 'a -> int) (comparer: unit -> 'a comparer) : 'a seq comparer =
         fun ((vl, vr): 'a seq pair) ->
-            let l = vl |> Seq.toArray |> Array.sortBy key
-            let r = vr |> Seq.toArray |> Array.sortBy key
+            let l = vl |> Seq.toArray |> Array.sortWith keyComparer
+            let r = vr |> Seq.toArray |> Array.sortWith keyComparer
             if l.Length <> r.Length then false
             else
             Array.zip l r 
             |> Array.forall (comparer())
 
     // compare a sequence ignoring the order. The key specifies the relation and must be unique.
-    let inline unordered<'a> key (comparer: 'a comparer) : 'a seq comparer =
+    let inline unorderedD<'a, 'k when 'k : comparison> (key: 'a -> 'k) (comparer: unit -> 'a comparer) : 'a seq comparer =
+        let keyComparer a b = 
+            let ka, kb = key a, key b
+            let c = Comparer<'k>.Default
+            c.Compare(ka, kb)
+        unorderedDWith keyComparer comparer
+
+    // compare a sequence ignoring the order. The key specifies the relation and must be unique.
+    let inline unordered<'a, 'k when 'k : comparison> (key: 'a -> 'k) (comparer: 'a comparer) : 'a seq comparer =
         unorderedD key (fun () -> comparer)
 
     // compare a sequence in order.
@@ -96,6 +103,75 @@ module private Implementation =
             |> Array.forall comparer
 
     let inline compare (a, b) = a = b
+    
+    //
+    // FSharpType support
+    //
+
+    let rec skipAbbreviatedType (t: FSharpType) =
+        if t.IsAbbreviation 
+        then skipAbbreviatedType t.AbbreviatedType
+        else t
+
+    //
+    // FSharpType key sequence. 
+    //   Generates a (lazy) sequence of comparable keys so that types can be compared 
+    //   for a proper member ordering that respects overloading.
+    //
+
+    type TypeKey = 
+        | Tuple
+        | Function
+        | GenericParameter 
+        | Array
+        | Named
+        | TKString of string
+        | TKBool of bool
+        | TKInt of int
+
+    [<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+    module TypeKey = 
+        let comparer = fun l r -> Comparer<TypeKey>.Default.Compare(l, r)
+        let sequenceComparer = Seq.compareWith comparer
+    
+    let rec typeKeys (tt: FSharpType) : TypeKey seq  =
+        let t = tt |> skipAbbreviatedType
+    
+        let genericArgumentsTypeKeys() : TypeKey seq =
+            t.GenericArguments |> FSharpType.Prettify |> Seq.map typeKeys |> Seq.collect id
+
+        seq {
+            match () with
+            | _ when t.IsTupleType ->
+                yield Tuple
+                yield! genericArgumentsTypeKeys()
+            | _ when t.IsFunctionType ->
+                yield Function
+                yield! genericArgumentsTypeKeys()
+            | _ when t.IsGenericParameter ->
+                yield GenericParameter
+                let gp = t.GenericParameter
+                yield TKString gp.Name
+                yield TKBool gp.IsMeasure
+                yield TKBool gp.IsSolveAtCompileTime
+            | _ when t.HasTypeDefinition ->
+                let td = t.TypeDefinition
+                match () with
+                | _ when td.IsArrayType ->
+                    yield Array
+                    yield TKInt td.ArrayRank
+                    yield! genericArgumentsTypeKeys()
+                | _ when td.TryFullName.IsSome ->
+                    yield Named
+                    yield TKString td.FullName
+                    yield! genericArgumentsTypeKeys()
+                | _ -> ()
+            | _ -> ()
+        }
+
+    //
+    // FSharpType signature comparer
+    //
 
     let mutable compareType : FSharpType comparer = sequence []
     compareType <-
@@ -110,31 +186,27 @@ module private Implementation =
                 // nested (fun gp -> gp.Constraints) 
             ]
 
+        let compareGenericArguments : FSharpType comparer =
+            nestedD (fun t -> t.GenericArguments |> FSharpType.Prettify) (fun () -> ordered compareType)
+
         let compareArrayType : FSharpType comparer =
             sequence [
                 nested (fun t -> t.TypeDefinition.ArrayRank) compare
-                nestedD (fun t -> t.GenericArguments |> FSharpType.Prettify) (fun () -> ordered compareType)
+                compareGenericArguments
             ]
 
         let compareNamedType : FSharpType comparer =
             sequence [
                 nested (fun t -> t.TypeDefinition.FullName) compare
-                nestedD (fun t -> t.GenericArguments |> FSharpType.Prettify) (fun () -> ordered compareType)
+                compareGenericArguments
             ]
-        
-        let rec skipAbbreviatedType (t: FSharpType) =
-            if t.IsAbbreviation 
-            then skipAbbreviatedType t.AbbreviatedType
-            else t
-            
+                    
         fun (l_, r_) ->
             // first find the real types, if they are abbreviated
             let (l, r) as p = skipAbbreviatedType l_, skipAbbreviatedType r_
             match () with
             | _ when l.IsTupleType && r.IsTupleType || l.IsFunctionType && r.IsFunctionType -> 
-                p |> nestedD
-                    (fun t -> t.GenericArguments |> FSharpType.Prettify) 
-                    (fun () -> ordered compareType)
+                p |> compareGenericArguments
             | _ when l.IsGenericParameter && r.IsGenericParameter ->
                 p |> nested (fun t -> t.GenericParameter) compareGenericParameterReference                
             // now we must have a type definition
@@ -291,8 +363,19 @@ module private Implementation =
             ]
 
         let compareMembers =
+            
+            let memberOrderKeys (m: FSharpMemberOrFunctionOrValue) = 
+                seq {
+                    yield TKString m.CompiledName
+                    yield! typeKeys m.FullType
+                }
+
+            let memberOrderedKeysComparer = 
+                fun l r ->
+                    TypeKey.sequenceComparer (memberOrderKeys l) (memberOrderKeys r)
+            
             let compareMembers : FSharpMemberOrFunctionOrValue seq comparer =
-                unordered<FSharpMemberOrFunctionOrValue> (fun m -> m.CompiledName) compareMember
+                unorderedDWith memberOrderedKeysComparer  (fun () -> compareMember)
                 |> filter Member context
 
             sequence<FSharpEntity> [
@@ -309,7 +392,7 @@ module private Implementation =
         let mutable compareEntity = sequence []
 
         let compareNestedEntities =
-            unorderedD<FSharpEntity> (fun e -> e.CompiledName) (fun () -> compareEntity)
+            unorderedD<FSharpEntity,_> (fun e -> e.CompiledName) (fun () -> compareEntity)
             |> filter Entity context
 
         let compareModule : FSharpEntity comparer = 
@@ -336,7 +419,7 @@ module private Implementation =
 
         let compareUnorderedFields: FSharpEntity comparer =
             sequence [
-                nested (fun e -> e.FSharpFields) (unordered<FSharpField> (fun f -> f.Name) compareField |> filter Field context)
+                nested (fun e -> e.FSharpFields) (unordered<FSharpField,_> (fun f -> f.Name) compareField |> filter Field context)
             ]
 
         let compareOrderedFields: FSharpEntity comparer =
@@ -359,7 +442,7 @@ module private Implementation =
                 ]
 
             let compareCases : FSharpUnionCase seq comparer =
-                unordered<FSharpUnionCase> (fun uc -> uc.Name) compareCase
+                unordered<FSharpUnionCase, _> (fun uc -> uc.Name) compareCase
                 |> filter UnionCase context
 
             sequence [
@@ -399,7 +482,7 @@ module private Implementation =
 
     let compareEntities context = 
         let compareEntity = compareEntity context
-        unordered<FSharpEntity> (fun e -> e.CompiledName) compareEntity
+        unordered<FSharpEntity, _> (fun e -> e.CompiledName) compareEntity
         |> filter Entity context
 
 let compareAssemblySignature (v : Visitor) : FSharpAssemblySignature comparer = 
