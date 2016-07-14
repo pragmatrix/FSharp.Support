@@ -1,4 +1,10 @@
-﻿// ref
+﻿// enum, different base type
+type E = 
+    | A = 0
+// !=
+type E = 
+    | A = 0u
+// -- ref
 type A = int ref
 // !=
 type A = string ref

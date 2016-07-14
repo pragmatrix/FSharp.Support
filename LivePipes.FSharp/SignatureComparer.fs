@@ -229,7 +229,7 @@ module private Implementation =
             ordered compareGenericParameterConstraint
 
         sequence<FSharpGenericParameter> [
-            // names are not relevant, only depend on the order inside the entity declaration
+            // names are (hopefully) not relevant here, we only depend on the order inside the entity declaration
             // (also these names might be compiler generated if IsCompilerGenerated is true)
             // nested (fun gp -> gp.Name) compare
             nested (fun gp -> gp.IsMeasure) compare
@@ -377,7 +377,7 @@ module private Implementation =
             nestedIf (fun e -> e.IsArrayType) (fun e -> e.ArrayRank) compare
             nested (fun e -> e.IsByRef) compare
 
-            nestedIf (fun e -> e.IsEnum) id compareEnumFields
+            nestedIf (fun e -> e.IsEnum) id (compareBaseType <&> compareEnumFields)
             // ValueType is always set when IsEnum is true
             nestedIf (fun e -> e.IsValueType) id (compareMembers <&> compareDeclaredInterfaces)
 
