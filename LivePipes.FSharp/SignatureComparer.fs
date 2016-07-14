@@ -132,7 +132,7 @@ module private Implementation =
             let (l, r) as p = skipAbbreviatedType l_, skipAbbreviatedType r_
             match () with
             | _ when l.IsTupleType && r.IsTupleType || l.IsFunctionType && r.IsFunctionType -> 
-                p |> nestedD 
+                p |> nestedD
                     (fun t -> t.GenericArguments |> FSharpType.Prettify) 
                     (fun () -> ordered compareType)
             | _ when l.IsGenericParameter && r.IsGenericParameter ->
@@ -145,7 +145,10 @@ module private Implementation =
                 | l, r when l.TryFullName.IsSome && r.TryFullName.IsSome->
                     p |> compareNamedType
                 | _ -> false
-            | _ -> false
+            | _ -> 
+                // this could be a missing measure "MeasureRationalPower" implementation,
+                // so we consider them equal
+                true
 
     type ConstructorArgument = FSharpType * obj
     type NamedArgument = FSharpType * string * bool (*isField*) * obj (*value*)
@@ -331,15 +334,18 @@ module private Implementation =
                 nested (fun f -> f.Accessibility) compareAccessibility
             ]
 
-        let compareRecordFields : FSharpEntity comparer =
+        let compareUnorderedFields: FSharpEntity comparer =
             sequence [
                 nested (fun e -> e.FSharpFields) (unordered<FSharpField> (fun f -> f.Name) compareField |> filter Field context)
             ]
-        
-        let compareEnumFields: FSharpEntity comparer =
+
+        let compareOrderedFields: FSharpEntity comparer =
             sequence [
-                nested (fun e -> e.FSharpFields) (unordered<FSharpField> (fun f -> f.Name) compareField |> filter Field context)
+                nested (fun e -> e.FSharpFields) (ordered compareField |> filter Field context)
             ]
+
+        let compareRecordFields, compareEnumFields = compareUnorderedFields, compareUnorderedFields
+        let compareExceptionFields = compareOrderedFields
 
         let compareUnionCases : FSharpEntity comparer =
 
@@ -358,7 +364,6 @@ module private Implementation =
             sequence [
                 nested (fun e -> e.UnionCases) compareCases
             ]
-
         compareEntity <- sequence<FSharpEntity> [
             nested (fun e -> e.Accessibility) compareAccessibility
 
@@ -380,7 +385,7 @@ module private Implementation =
             nestedIf (fun e -> e.IsClass) id (compareBaseType <&> compareDeclaredInterfaces <&> compareMembers)
 
             nested (fun e -> e.IsMeasure) compare
-            nested (fun e -> e.IsFSharpExceptionDeclaration) compare
+            nestedIf (fun e -> e.IsFSharpExceptionDeclaration) id compareExceptionFields
             nestedIf (fun e -> e.IsFSharpAbbreviation) (fun e -> e.AbbreviatedType) compareType
 
             nestedIf (fun e -> e.IsFSharpRecord) id (compareRecordFields <&> compareDeclaredInterfaces <&> compareMembers)
