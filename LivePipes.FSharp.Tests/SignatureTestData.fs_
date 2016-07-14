@@ -1,4 +1,22 @@
-﻿// overloads, different order
+﻿// byref diff type
+type C() =
+    member this.A(x: string byref) = ()
+// !=
+type C() =
+    member this.A(x: int byref) = ()
+// -- byref diff
+type C() =
+    member this.A(x: int) = ()
+// !=
+type C() =
+    member this.A(x: int byref) = ()
+// -- byref same
+type C() =
+    member this.A(x: int byref) = ()
+// ==
+type C() =
+    member this.A(x: int byref) = ()
+// -- overloads, different order
 type C() =
     member this.A(x: int) = ()
     member this.A(x: string) = ()

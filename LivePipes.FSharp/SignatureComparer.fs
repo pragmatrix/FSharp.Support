@@ -33,12 +33,17 @@ module private Implementation =
             c.CurrentPath <- List.tail c.CurrentPath
             r
     
-    let filter (declConstructor: 'a -> Declaration) (c: Context) (comparer: 'a seq comparer) : 'a seq comparer =
+    let mayFilter (declConstructor: 'a -> Declaration) (c: Context) (comparer: 'a seq comparer) : 'a seq comparer =
         let filter = c.Visitor.DeclarationFilter
         fun (lseq, rseq) ->
             let path = c.CurrentPath
             let filter = declConstructor >> filter path
             comparer (Seq.filter filter lseq, Seq.filter filter rseq)
+
+    let filter (f: 'a -> bool) (comparer: 'a seq comparer) : 'a seq comparer = 
+        fun (lseq, rseq) ->
+            (lseq |> Seq.filter f, rseq |> Seq.filter f)
+            |> comparer 
 
     let nestedD get comparer = 
         fun (enclosingL, enclosingR) ->
@@ -124,6 +129,7 @@ module private Implementation =
         | Function
         | GenericParameter 
         | Array
+        | ByRef
         | Named
         | TKString of string
         | TKBool of bool
@@ -160,6 +166,9 @@ module private Implementation =
                 | _ when td.IsArrayType ->
                     yield Array
                     yield TKInt td.ArrayRank
+                    yield! genericArgumentsTypeKeys()
+                | _ when td.IsByRef ->
+                    yield ByRef
                     yield! genericArgumentsTypeKeys()
                 | _ when td.TryFullName.IsSome ->
                     yield Named
@@ -214,6 +223,8 @@ module private Implementation =
                 match l.TypeDefinition, r.TypeDefinition with
                 | l, r when l.IsArrayType && r.IsArrayType ->
                     p |> compareArrayType
+                | l, r when l.IsByRef && r.IsByRef ->
+                    p |> compareGenericArguments
                 | l, r when l.TryFullName.IsSome && r.TryFullName.IsSome->
                     p |> compareNamedType
                 | _ -> false
@@ -226,6 +237,12 @@ module private Implementation =
     type NamedArgument = FSharpType * string * bool (*isField*) * obj (*value*)
 
     let compareAttributes : FSharpAttribute seq comparer = 
+
+        let globalAttributeFilter (a: FSharpAttribute) = 
+            match a.AttributeType.QualifiedName with
+            // not yet supported by F# and throws an exception, as soon we access ConstructorArguments
+            | "System.Runtime.InteropServices.TypeLibImportClassAttribute" -> false
+            | _ -> true
 
         let compareAttribute : FSharpAttribute comparer = 
 
@@ -254,6 +271,7 @@ module private Implementation =
             ]
     
         ordered compareAttribute
+        |> filter globalAttributeFilter
 
     let compareGenericParameterDeclaration = 
 
@@ -376,7 +394,7 @@ module private Implementation =
             
             let compareMembers : FSharpMemberOrFunctionOrValue seq comparer =
                 unorderedDWith memberOrderedKeysComparer  (fun () -> compareMember)
-                |> filter Member context
+                |> mayFilter Member context
 
             sequence<FSharpEntity> [
                 nested (fun e -> e.MembersFunctionsAndValues) compareMembers
@@ -393,7 +411,7 @@ module private Implementation =
 
         let compareNestedEntities =
             unorderedD<FSharpEntity,_> (fun e -> e.CompiledName) (fun () -> compareEntity)
-            |> filter Entity context
+            |> mayFilter Entity context
 
         let compareModule : FSharpEntity comparer = 
             sequence [
@@ -419,12 +437,12 @@ module private Implementation =
 
         let compareUnorderedFields: FSharpEntity comparer =
             sequence [
-                nested (fun e -> e.FSharpFields) (unordered<FSharpField,_> (fun f -> f.Name) compareField |> filter Field context)
+                nested (fun e -> e.FSharpFields) (unordered<FSharpField,_> (fun f -> f.Name) compareField |> mayFilter Field context)
             ]
 
         let compareOrderedFields: FSharpEntity comparer =
             sequence [
-                nested (fun e -> e.FSharpFields) (ordered compareField |> filter Field context)
+                nested (fun e -> e.FSharpFields) (ordered compareField |> mayFilter Field context)
             ]
 
         let compareRecordFields = compareUnorderedFields
@@ -436,14 +454,14 @@ module private Implementation =
             let compareCase : FSharpUnionCase comparer =
                 sequence [
                     nested (fun uc -> uc.Name) compare
-                    nested (fun uc -> uc.UnionCaseFields) (ordered compareField |> filter Field context)
+                    nested (fun uc -> uc.UnionCaseFields) (ordered compareField |> mayFilter Field context)
                     nested (fun uc -> uc.Attributes) compareAttributes
                     nested (fun uc -> uc.Accessibility) compareAccessibility
                 ]
 
             let compareCases : FSharpUnionCase seq comparer =
                 unordered<FSharpUnionCase, _> (fun uc -> uc.Name) compareCase
-                |> filter UnionCase context
+                |> mayFilter UnionCase context
 
             sequence [
                 nested (fun e -> e.UnionCases) compareCases
@@ -483,7 +501,7 @@ module private Implementation =
     let compareEntities context = 
         let compareEntity = compareEntity context
         unordered<FSharpEntity, _> (fun e -> e.CompiledName) compareEntity
-        |> filter Entity context
+        |> mayFilter Entity context
 
 let compareAssemblySignature (v : Visitor) : FSharpAssemblySignature comparer = 
     let c = { Visitor = v; CurrentPath = [] }
