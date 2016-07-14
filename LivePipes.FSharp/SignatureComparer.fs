@@ -344,7 +344,8 @@ module private Implementation =
                 nested (fun e -> e.FSharpFields) (ordered compareField |> filter Field context)
             ]
 
-        let compareRecordFields, compareEnumFields = compareUnorderedFields, compareUnorderedFields
+        let compareRecordFields = compareUnorderedFields
+        let compareEnumFields = compareUnorderedFields
         let compareExceptionFields = compareOrderedFields
 
         let compareUnionCases : FSharpEntity comparer =

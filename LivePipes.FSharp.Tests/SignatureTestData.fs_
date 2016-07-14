@@ -1,4 +1,51 @@
-﻿// measure, accessible value differs
+﻿// ref
+type A = int ref
+// !=
+type A = string ref
+// -- ref
+type A = int ref
+// ==
+type A = int ref
+// -- ref
+type A = int ref
+// !=
+type A = int
+// -- array, same type aliases
+type A = int array
+// ==
+type A = int []
+// -- array, same type aliases
+type A = array<int>
+// ==
+type A = int []
+// -- class, different base type
+type A = interface end
+type B = interface end
+type C() = 
+    interface A
+// !=
+type A = interface end
+type B = interface end
+type C() = 
+    interface B
+// -- delegate, named, same
+type Del1 = delegate of x:int -> int
+// ==
+type Del1 = delegate of x:int -> int
+// --
+// delegate, named
+type Del1 = delegate of x:int -> int
+// !=
+type Del1 = delegate of y:int -> int
+// -- delegate, diff
+type Del1 = delegate of int -> int
+// !=
+type Del1 = delegate of int -> float
+// -- delegate, same
+type Del1 = delegate of int -> int
+// ==
+type Del1 = delegate of int -> int
+// -- measure, accessible value differs
 [<Measure>] type kg
 [<Measure>] type s
 [<Measure>] type g
