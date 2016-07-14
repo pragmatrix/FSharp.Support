@@ -1,0 +1,67 @@
+﻿// modulesuffix
+module X =
+  type D = A of int
+// !=
+[<CompilationRepresentation(CompilationRepresentationFlags.ModuleSuffix)>]
+module X =
+  type D = A of int
+// -- module in namespace
+namespace A.B
+module X =
+  type D = A of int
+// !=
+namespace A.B
+module Y =
+  type D = A of int
+// -- module in namespace
+namespace A.B
+module X =
+  type D = A of int
+// ==
+namespace A.B
+module X =
+  type D = A of int
+// -- nested namespace
+namespace A.B
+type D = A of int
+// !=
+namespace A.C
+type D = A of int
+// -- nested namespace
+namespace A.B
+type D = A of int
+// ==
+namespace A.B
+type D = A of int
+// -- namespace equal
+namespace A
+type D = A of int
+// ==
+namespace A
+type D = A of int
+// -- namespace change
+namespace A
+type D = A of int
+// !=
+namespace B
+type D = A of int
+// -- empty namespaces are considered equal (actually all information about them is erased)
+namespace A
+// ==
+namespace B
+// --
+module ModuleWithDifferentName
+// !=
+module ModuleWithDifferentName1
+// --
+module ModuleWithSameName
+// ==
+module ModuleWithSameName
+// -- private signatures are also included in the Assembly Signature
+module private ModulePrivateWithDifferentNames
+// !=
+module private ModulePrivateWithDifferentNames1
+// --
+module internal ModuleInternalWithDifferentNames
+// !=
+module internal ModuleInternalWithDifferentNames1

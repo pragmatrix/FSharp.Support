@@ -1,153 +1,132 @@
-﻿// todo: functions with different types, byrefs
-// different namespace names
-namespace A
+﻿// measure, same definition
+[<Measure>] type cm
+[<Measure>] type ml = cm^2
+// ==
+[<Measure>] type cm
+[<Measure>] type ml = cm^2
+// -- measure, equal
+[<Measure>] type cm
+// ==
+[<Measure>] type cm
+// -- exception, names matter
+exception Ex of n:string
 // !=
-namespace B
-// --
-// enum, same order, different values (must be considered different, because values are treated as consts and are copied in dependent assemblies)
+exception Ex of n1:string
+// -- exception, equal
+exception Ex of string * int
+// ==
+exception Ex of string * int
+// -- exception, order of argument types matter
+exception Ex of string * int
+// !=
+exception Ex of int * string
+// -- exception
+exception Ex of string
+// !=
+exception Ex of int
+// -- enum, same order, different values (must be considered different, because values are treated as consts and are copied in dependent assemblies)
 type E = | A = 0 | B = 1
 // !=
 type E = | A = 0 | B = 2
-// --
-// generic function with different generic parameter names (does not work, would require normalization)
+// -- generic function with different generic parameter names (does not work, would require normalization)
 let x (a: 'a) = a
 // !=
 let x (b: 'b) = b
-// --
-// type abbrevation (points to same type via a abbrevation or a qualified name)
+// -- type abbrevation (points to same type via a abbrevation or a qualified name)
 type A = int
 // ==
 type A = System.Int32
-// --
-// generic function with different parameter names
+// -- generic function with different parameter names
 let x a = a
 // ==
 let x b = b
-// --
-// arrays of different types
+// -- arrays of different types
 let a = [|0|]
 // !=
 let a = [|"a"|]
-// --
-// union with same types but different order
+// -- union with same types but different order
 type U = A of x:int * y:int
 // !=
 type U = A of y:int * x:int
-// --
-// generic union (note, these could be equal, but then we need to normalize / indexify 
+// -- generic union (note, these could be equal, but then we need to normalize / indexify 
 // generic parameter names). 
 type U<'a> = A of 'a
 // !=
 type U<'b> = A of 'b
-// --
-// function inline 
+// -- function inline 
 let f x = x * x
 // !=
 let inline f x = x * x
-// --
-// union with different field names
+// -- union with different field names
 type U = A of x:int
 // !=
 type U = A of y:int
-// --
-// rank 1 & 2 arrays of the same type
+// -- rank 1 & 2 arrays of the same type
 let a = [|0|]
 // !=
 let a = array2D [[1;0];[0;1]]
-// --
-// generic function with different generic parameter constraints
+// -- generic function with different generic parameter constraints
 let x (a: 'a) = a
 // !=
 let x (a: 'a when 'a : null) = a
-// --
-// class constructor parameter name
+// -- class constructor parameter name
 type X(x:int) = class end
 // ==
 type X(y:int) = class end
-// --
-// class constructor
+// -- class constructor
 type X(x:int) = class end
 // !=
 type X = class end
-// --
-// mutable let value
+// -- mutable let value
 [<Literal>]
 let a = 0
 // !=
 let mutable a = 0
-// --
-// literal let value
+// -- literal let value
 [<Literal>]
 let a = 0
 // !=
 let a = 0
-// --
-// simple let value
+// -- simple let value
 let a = 0
 // ==
 let a = 1
-// --
-// type abbrevation
+// -- type abbrevation
 type A = int
 // !=
 type A = string
-// --
-// enum, flags and no flags
+// -- enum, flags and no flags
 open System
 [<Flags>]
 type E = A = 0
 // !=
 type E = A = 0
-// --
-// enum, different order, same values
+// -- enum, different order, same values
 type E = | A = 0 | B = 1
 // ==
 type E = | B = 1 | A = 0
-// --
-// enum, additional value
+// -- enum, additional value
 type E = | A = 0
 // !=
 type E = | A = 0 | B = 1
-// --
-// union, same cases, but order changed
+// -- union, same cases, but order changed
 type U = A | B
 // ==
 type U = B | A
-// --
-// union, different cases
+// -- union, different cases
 type U = A
 // !=
 type U = B
-// --
-// interface <> class
+// -- interface <> class
 type X = class end
 // !=
 type X = interface end
-// --
-// same type, but different attributes
+// -- same type, but different attributes
 [<Sealed>]
 type X = class end
 // !=
 type X = class end
 // --
-module ModuleWithDifferentName
-// !=
-module ModuleWithDifferentName1
-// --
 type TypeWithSameNameAtRoot = class end
 // ==
 type TypeWithSameNameAtRoot = class end
-// --
-module ModuleWithSameName
-// ==
-module ModuleWithSameName
-// --
-// private signatures are also included in the Assembly Signature
-module private ModulePrivateWithDifferentNames
-// !=
-module private ModulePrivateWithDifferentNames1
-// --
-module internal ModuleInternalWithDifferentNames
-// !=
-module internal ModuleInternalWithDifferentNames1
-

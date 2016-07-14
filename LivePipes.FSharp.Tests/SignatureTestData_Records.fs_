@@ -1,4 +1,11 @@
-﻿// record with same member but static changed
+﻿// record with IDisposable
+type R = { x: int }
+  with
+  interface System.IDisposable with
+    member x.Dispose() = ()
+// !=
+type R = { x: int }
+// -- record with same member but static changed
 type R = { x: int }
   with
   member this.value1 = ()
@@ -6,8 +13,7 @@ type R = { x: int }
 type R = { x: int }
   with
   static member value1 = ()
-// --
-// record with different member order
+// -- record with different member order
 type R = { x: int }
   with
   member this.value1 = ()
@@ -17,8 +23,7 @@ type R = { x: int }
   with
   member this.value2 = ()
   member this.value1 = ()
-// --
-// record with different member
+// -- record with different member
 type R = { x: int }
   with
   member this.value1 = ()
@@ -26,8 +31,7 @@ type R = { x: int }
 type R = { x: int }
   with
   member this.value2 = ()
-// --
-// record with member
+// -- record with member
 type R = { x: int }
   with
   member this.value = ()
@@ -35,23 +39,19 @@ type R = { x: int }
 type R = { x: int }
   with
   member this.value = ()
-// --
-// record, different types
+// -- record, different types
 type R = { A: string; B: string }
 // !=
 type R = { A: int; B: string }
-// --
-// record, field order changed
+// -- record, field order changed
 type R = { A: string; B: string }
 // ==
 type R = { B: string; A: string }
-// --
-// record, same
+// -- record, same
 type R = { A: string; B: string }
 // ==
 type R = { A: string; B: string }
-// --
-// record with different member order
+// -- record with different member order
 type R = { x: int }
   with
   member this.value1 = ()
@@ -61,4 +61,4 @@ type R = { x: int }
   with
   member this.value2 = ()
   member this.value1 = ()
-// --
+

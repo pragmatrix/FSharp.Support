@@ -13,11 +13,11 @@ type CompareCommand =
 type CompareInst = CompareInst of CompareCommand * string * string
 
 let makeCommand (str: string) = 
-    let equal = str.Split([|"// ==\r\n"|], StringSplitOptions.None)
+    let equal = str.Split([|"// ==\n"|], StringSplitOptions.None)
     match equal with
     | [|a;b|] -> (Equal, a, b) |> CompareInst
     | _ ->
-    let notEqual = str.Split([|"// !=\r\n"|], StringSplitOptions.None)
+    let notEqual = str.Split([|"// !=\n"|], StringSplitOptions.None)
     match notEqual with
     | [|a;b|] -> (NotEqual, a, b) |> CompareInst
     | _ -> failwithf "failed to find // == or // != in %A" str  
@@ -54,13 +54,26 @@ let testAll() =
     let testFile fn = 
         let testFile = File.ReadAllText fn
         let compareInstructions = 
-            testFile.Split([|"// --\r\n"|], StringSplitOptions.None)
+            // normalize line endings and strip comments from lines beginning with "// --"
+            let preprocessed = 
+                testFile.Split([|"\n"|], StringSplitOptions.None)
+                |> Array.map(fun s -> s.TrimEnd())
+                |> Array.map(fun s -> if s.StartsWith("// --") then "// --" else s)
+                |> String.concat "\n"
+
+            preprocessed.Split([|"// --\n"|], StringSplitOptions.None)
             |> Seq.map makeCommand
             |> Seq.toList
 
         compareInstructions
         |> List.iter compare
     
-    ["SignatureTestData.fs_"; "SignatureTestData_Records.fs_"]
+    [
+        ""
+        "_Issues"
+        "_Records"
+        "_NamespacesAndModules"
+    ]
+    |> List.map (fun s -> "SignatureTestData" + s + ".fs_")
     |> List.iter testFile
 
