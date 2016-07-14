@@ -1,8 +1,28 @@
-﻿// todo: namespaces, functions with different types
+﻿// todo: functions with different types, byrefs
+// different namespace names
+namespace A
+// !=
+namespace B
+// --
+// enum, same order, different values (must be considered different, because values are treated as consts and are copied in dependent assemblies)
+type E = | A = 0 | B = 1
+// !=
+type E = | A = 0 | B = 2
+// --
+// generic function with different generic parameter names (does not work, would require normalization)
+let x (a: 'a) = a
+// !=
+let x (b: 'b) = b
+// --
 // type abbrevation (points to same type via a abbrevation or a qualified name)
 type A = int
 // ==
 type A = System.Int32
+// --
+// generic function with different parameter names
+let x a = a
+// ==
+let x b = b
 // --
 // arrays of different types
 let a = [|0|]
@@ -19,11 +39,6 @@ type U = A of y:int * x:int
 type U<'a> = A of 'a
 // !=
 type U<'b> = A of 'b
-// --
-// generic function with different parameter names
-let x a = a
-// ==
-let x b = b
 // --
 // function inline 
 let f x = x * x
@@ -43,12 +58,7 @@ let a = array2D [[1;0];[0;1]]
 // generic function with different generic parameter constraints
 let x (a: 'a) = a
 // !=
-let x (b: 'a when 'a : null) = b
-// --
-// generic function with different generic parameter names
-let x (a: 'a) = a
-// ==
-let x (b: 'b) = b
+let x (a: 'a when 'a : null) = a
 // --
 // class constructor parameter name
 type X(x:int) = class end
@@ -82,55 +92,12 @@ type A = int
 // !=
 type A = string
 // --
-// record with different member order
-type R = { x: int }
-  with
-  member this.value1 = ()
-// !=
-type R = { x: int }
-  with
-  static member value1 = ()
-// --
-// record with different member order
-type R = { x: int }
-  with
-  member this.value1 = ()
-  member this.value2 = ()
-// ==
-type R = { x: int }
-  with
-  member this.value2 = ()
-  member this.value1 = ()
-// --
-// record with different member
-type R = { x: int }
-  with
-  member this.value1 = ()
-// !=
-type R = { x: int }
-  with
-  member this.value2 = ()
-// --
-// record with member
-type R = { x: int }
-  with
-  member this.value = ()
-// ==
-type R = { x: int }
-  with
-  member this.value = ()
-// --
 // enum, flags and no flags
 open System
 [<Flags>]
 type E = A = 0
 // !=
 type E = A = 0
-// --
-// enum, same order, different values
-type E = | A = 0 | B = 1
-// !=
-type E = | A = 0 | B = 2
 // --
 // enum, different order, same values
 type E = | A = 0 | B = 1
@@ -141,21 +108,6 @@ type E = | B = 1 | A = 0
 type E = | A = 0
 // !=
 type E = | A = 0 | B = 1
-// --
-// record, different types
-type R = { A: string; B: string }
-// !=
-type R = { A: int; B: string }
-// --
-// record, field order changed
-type R = { A: string; B: string }
-// ==
-type R = { B: string; A: string }
-// --
-// record, same
-type R = { A: string; B: string }
-// ==
-type R = { A: string; B: string }
 // --
 // union, same cases, but order changed
 type U = A | B
@@ -190,11 +142,12 @@ module ModuleWithSameName
 // ==
 module ModuleWithSameName
 // --
+// private signatures are also included in the Assembly Signature
 module private ModulePrivateWithDifferentNames
-// ==
+// !=
 module private ModulePrivateWithDifferentNames1
 // --
 module internal ModuleInternalWithDifferentNames
-// ==
+// !=
 module internal ModuleInternalWithDifferentNames1
 

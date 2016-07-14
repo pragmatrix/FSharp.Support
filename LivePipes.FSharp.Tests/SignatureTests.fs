@@ -28,7 +28,7 @@ let compare (CompareInst(cmd, a, b) as inst) =
     let getSigFromFile file =
         let projectResults = parseAndCheckSingleFile file
         if projectResults.Errors.Length <> 0 then
-            failwithf "found errors or warningn: %A" projectResults.Errors
+            failwithf "found errors or warnings: %A" projectResults.Errors
         projectResults.AssemblySignature
         
     let sigA = a |> getSigFromFile
@@ -50,13 +50,17 @@ let compare (CompareInst(cmd, a, b) as inst) =
 
 [<Fact>]
 let testAll() =
-    let testFile = File.ReadAllText("SignatureTestFilesPublic.fs_")
-    let compareInstructions = 
-        testFile.Split([|"// --\r\n"|], StringSplitOptions.None)
-        |> Seq.map makeCommand
-        |> Seq.toList
 
-    compareInstructions
-    |> List.iter compare
+    let testFile fn = 
+        let testFile = File.ReadAllText fn
+        let compareInstructions = 
+            testFile.Split([|"// --\r\n"|], StringSplitOptions.None)
+            |> Seq.map makeCommand
+            |> Seq.toList
+
+        compareInstructions
+        |> List.iter compare
     
+    ["SignatureTestData.fs_"; "SignatureTestData_Records.fs_"]
+    |> List.iter testFile
 

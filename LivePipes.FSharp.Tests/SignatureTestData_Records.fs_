@@ -1,0 +1,64 @@
+﻿// record with same member but static changed
+type R = { x: int }
+  with
+  member this.value1 = ()
+// !=
+type R = { x: int }
+  with
+  static member value1 = ()
+// --
+// record with different member order
+type R = { x: int }
+  with
+  member this.value1 = ()
+  member this.value2 = ()
+// ==
+type R = { x: int }
+  with
+  member this.value2 = ()
+  member this.value1 = ()
+// --
+// record with different member
+type R = { x: int }
+  with
+  member this.value1 = ()
+// !=
+type R = { x: int }
+  with
+  member this.value2 = ()
+// --
+// record with member
+type R = { x: int }
+  with
+  member this.value = ()
+// ==
+type R = { x: int }
+  with
+  member this.value = ()
+// --
+// record, different types
+type R = { A: string; B: string }
+// !=
+type R = { A: int; B: string }
+// --
+// record, field order changed
+type R = { A: string; B: string }
+// ==
+type R = { B: string; A: string }
+// --
+// record, same
+type R = { A: string; B: string }
+// ==
+type R = { A: string; B: string }
+// --
+// record with different member order
+type R = { x: int }
+  with
+  member this.value1 = ()
+  member this.value2 = ()
+// ==
+type R = { x: int }
+  with
+  member this.value2 = ()
+  member this.value1 = ()
+// --

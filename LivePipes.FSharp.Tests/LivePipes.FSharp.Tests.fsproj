@@ -46,13 +46,16 @@
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="TestSupport.fs" />
     <Compile Include="SignatureTests.fs" />
-    <None Include="SignatureTestFilesPublic.fs_">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </None>
     <Compile Include="SignatureFormatterTests.fs" />
     <Compile Include="SignatureTestFormats.fs">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Compile>
+    <None Include="SignatureTestData.fs_">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="SignatureTestData_Records.fs_">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="FSharp.Core.optdata" />
     <None Include="FSharp.Core.sigdata" />
   </ItemGroup>
