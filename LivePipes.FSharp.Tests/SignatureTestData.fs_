@@ -1,4 +1,16 @@
-﻿// byref diff type
+﻿// includes private signatures by default
+module private M =
+    let x = 10
+// !=
+module private M = 
+    let y = 10
+// -- measure
+[<Measure>] type second
+[<Measure>] type becquerel = second^-1
+// ==
+[<Measure>] type second
+[<Measure>] type becquerel = second^-1
+// -- byref diff type
 type C() =
     member this.A(x: string byref) = ()
 // !=

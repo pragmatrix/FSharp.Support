@@ -114,7 +114,8 @@ module private Implementation =
     //
 
     let rec skipAbbreviatedType (t: FSharpType) =
-        if t.IsAbbreviation 
+        // we don't see measures yet as simple abbrevations.
+        if t.IsAbbreviation && (not (t.HasTypeDefinition && t.TypeDefinition.IsMeasure))
         then skipAbbreviatedType t.AbbreviatedType
         else t
 
@@ -130,6 +131,7 @@ module private Implementation =
         | GenericParameter 
         | Array
         | ByRef
+        | Measure
         | Named
         | TKString of string
         | TKBool of bool
@@ -170,11 +172,16 @@ module private Implementation =
                 | _ when td.IsByRef ->
                     yield ByRef
                     yield! genericArgumentsTypeKeys()
+                | _ when td.IsMeasure ->
+                    yield Measure
+                    yield TKString td.CompiledName
                 | _ when td.TryFullName.IsSome ->
                     yield Named
                     yield TKString td.FullName
                     yield! genericArgumentsTypeKeys()
-                | _ -> ()
+                | _ -> 
+                    yield TKString td.CompiledName
+                    yield! genericArgumentsTypeKeys()
             | _ -> ()
         }
 
@@ -209,10 +216,17 @@ module private Implementation =
                 nested (fun t -> t.TypeDefinition.FullName) compare
                 compareGenericArguments
             ]
+
+        let compareMeasure : FSharpType comparer =
+            sequence [
+                nested (fun t -> t.TypeDefinition.CompiledName) compare
+                // tbd: measure with generic argumens?
+                // compareGenericArguments
+            ]
                     
-        fun (l_, r_) ->
+        fun (lx, rx) ->
             // first find the real types, if they are abbreviated
-            let (l, r) as p = skipAbbreviatedType l_, skipAbbreviatedType r_
+            let (l, r) as p = skipAbbreviatedType lx, skipAbbreviatedType rx
             match () with
             | _ when l.IsTupleType && r.IsTupleType || l.IsFunctionType && r.IsFunctionType -> 
                 p |> compareGenericArguments
@@ -225,11 +239,16 @@ module private Implementation =
                     p |> compareArrayType
                 | l, r when l.IsByRef && r.IsByRef ->
                     p |> compareGenericArguments
+                | l, r when l.IsMeasure && r.IsMeasure ->
+                    p |> compareMeasure
                 | l, r when l.TryFullName.IsSome && r.TryFullName.IsSome->
                     p |> compareNamedType
+                // nativeptr`1 lands here, for example
+                | l, r when l.CompiledName = r.CompiledName ->
+                    p |> compareGenericArguments
                 | _ -> false
             | _ -> 
-                // this could be a missing measure "MeasureRationalPower" implementation,
+                // this could be the missing measure "MeasureRationalPower" implementation,
                 // so we consider them equal
                 true
 
@@ -238,16 +257,10 @@ module private Implementation =
 
     let compareAttributes : FSharpAttribute seq comparer = 
 
-        let globalAttributeFilter (a: FSharpAttribute) = 
-            match a.AttributeType.QualifiedName with
-            // not yet supported by F# and throws an exception, as soon we access ConstructorArguments
-            | "System.Runtime.InteropServices.TypeLibImportClassAttribute" -> false
-            | _ -> true
-
         let compareAttribute : FSharpAttribute comparer = 
 
-            let compareConstructorArgument = 
-                sequence<ConstructorArgument> [
+            let compareConstructorArgument : ConstructorArgument comparer = 
+                sequence [
                     nested (fun (t, _) -> t) compareType
                     nested (fun (_, v) -> v) compare
                 ]
@@ -255,8 +268,8 @@ module private Implementation =
             let compareConstructorArguments = 
                 ordered compareConstructorArgument
 
-            let compareNamedArgument = 
-                sequence<NamedArgument> [
+            let compareNamedArgument : NamedArgument comparer = 
+                sequence [
                     nested (fun (t, _ , _, _) -> t) compareType
                     nested (fun (_, n , _, _) -> n) compare
                     nested (fun (_, _ , _, v) -> v) compare
@@ -264,14 +277,20 @@ module private Implementation =
             let compareNamedArguments = 
                 unordered (fun (_, name, _, _)-> name) compareNamedArgument
 
+            let getConstructorArguments (a: FSharpAttribute) = 
+                try
+                    // an exception happens here if constructor arguments to
+                    // attributes uses types, which is not supported yet.
+                    a.ConstructorArguments |> seq
+                with _ -> Seq.empty
+
             sequence [
                 nested (fun a -> a.AttributeType.FullName) compare
-                nested (fun a -> a.ConstructorArguments) compareConstructorArguments
+                nested (getConstructorArguments) compareConstructorArguments
                 nested (fun a -> a.NamedArguments) compareNamedArguments
             ]
     
         ordered compareAttribute
-        |> filter globalAttributeFilter
 
     let compareGenericParameterDeclaration = 
 
@@ -337,7 +356,7 @@ module private Implementation =
         ]
 
     let compareMember : FSharpMemberOrFunctionOrValue comparer = 
-        sequence<FSharpMemberOrFunctionOrValue> [
+        sequence [
             nested (fun e -> e.GenericParameters) compareGenericParameterDeclarations
             nested (fun e -> e.FullType) compareType
             nested (fun e -> e.InlineAnnotation) compare
@@ -363,24 +382,24 @@ module private Implementation =
     
     let compareEntity (context: Context) =
 
-        let compareDelegateArgument =
-            sequence<string option * FSharpType>[
+        let compareDelegateArgument : (string option * FSharpType) comparer =
+            sequence[
                 nested fst compare
                 nested snd compareType
             ]
 
-        let compareDelegateSignature = 
-            sequence<FSharpDelegateSignature> [
+        let compareDelegateSignature : FSharpDelegateSignature comparer = 
+            sequence [
                 nested (fun ds -> ds.DelegateArguments) (ordered compareDelegateArgument)
                 nested (fun ds -> ds.DelegateReturnType) compareType
             ]
 
-        let compareBaseType =
-            sequence<FSharpEntity> [
+        let compareBaseType : FSharpEntity comparer =
+            sequence [
                 nestedIf (fun e -> e.BaseType.IsSome) (fun e -> e.BaseType.Value) compareType
             ]
 
-        let compareMembers =
+        let compareMembers : FSharpEntity comparer =
             
             let memberOrderKeys (m: FSharpMemberOrFunctionOrValue) = 
                 seq {
@@ -393,15 +412,15 @@ module private Implementation =
                     TypeKey.sequenceComparer (memberOrderKeys l) (memberOrderKeys r)
             
             let compareMembers : FSharpMemberOrFunctionOrValue seq comparer =
-                unorderedDWith memberOrderedKeysComparer  (fun () -> compareMember)
+                unorderedDWith memberOrderedKeysComparer (fun () -> compareMember)
                 |> mayFilter Member context
 
-            sequence<FSharpEntity> [
+            sequence [
                 nested (fun e -> e.MembersFunctionsAndValues) compareMembers
             ]
 
-        let compareDeclaredInterfaces =
-            sequence<FSharpEntity> [
+        let compareDeclaredInterfaces : FSharpEntity comparer =
+            sequence [
                 nested 
                     (fun e -> e.DeclaredInterfaces) 
                     (unordered (fun t -> t.TypeDefinition.CompiledName) compareType)
@@ -409,7 +428,7 @@ module private Implementation =
     
         let mutable compareEntity = sequence []
 
-        let compareNestedEntities =
+        let compareNestedEntities : FSharpEntity seq comparer =
             unorderedD<FSharpEntity,_> (fun e -> e.CompiledName) (fun () -> compareEntity)
             |> mayFilter Entity context
 
@@ -466,6 +485,7 @@ module private Implementation =
             sequence [
                 nested (fun e -> e.UnionCases) compareCases
             ]
+
         compareEntity <- sequence<FSharpEntity> [
             nested (fun e -> e.Accessibility) compareAccessibility
 
@@ -482,7 +502,7 @@ module private Implementation =
             // ValueType is always set when IsEnum is true
             nestedIf (fun e -> e.IsValueType) id (compareMembers <&> compareDeclaredInterfaces)
 
-            nestedIf (fun e -> e.IsDelegate) (fun e -> e.FSharpDelegateSignature) compareDelegateSignature
+            nestedIf (fun e -> e.IsDelegate && e.IsFSharp) (fun e -> e.FSharpDelegateSignature) compareDelegateSignature
             nestedIf (fun e -> e.IsInterface) id (compareBaseType <&> compareDeclaredInterfaces <&> compareMembers)
             nestedIf (fun e -> e.IsClass) id (compareBaseType <&> compareDeclaredInterfaces <&> compareMembers)
 

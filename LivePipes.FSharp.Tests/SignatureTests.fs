@@ -2,10 +2,10 @@
 
 open System
 open System.IO
+open System.Diagnostics
 open FsUnit
 open Xunit
 open LivePipes.FSharp
-open Microsoft.FSharp.Compiler.SourceCodeServices
 
 type CompareCommand =
     | Equal
@@ -80,11 +80,11 @@ let runMiniTests() =
     |> List.iter testFile
 
 [<Fact>]
-let compareDependenciesIncludingFSharpCore() =
+let compareDependenciesOfFSharpCore() =
     clearCaches()
-    let results1 = parseAndCheckSingleFile "namespace Empty"
+    let results1 = parseAndCheckSingleFile ""
     clearCaches()
-    let results2 = parseAndCheckSingleFile "namespace Empty"
+    let results2 = parseAndCheckSingleFile ""
     
     let assemblies1 = results1.ProjectContext.GetReferencedAssemblies()
     let assemblies2 = results2.ProjectContext.GetReferencedAssemblies()
@@ -95,13 +95,16 @@ let compareDependenciesIncludingFSharpCore() =
 
         let declarationFilter (path: SignatureComparer.Path) (declaration : SignatureComparer.Declaration) = 
             let indent = String.replicate (path.Length) "  "
-            printfn "%sPath: %A:" indent path
-            printfn "%s%A" indent declaration
+            let p = sprintf "%sPath: %A:" indent path
+            let decl = sprintf "%s%A" indent declaration
+            Debug.WriteLine(p)
+            Debug.WriteLine(decl)
             true
 
         let r = SignatureComparer.compareAssemblySignature { DeclarationFilter = declarationFilter } assemblies
         r |> should be True
     
     Seq.zip assemblies1 assemblies2
+    |> Seq.filter (fun (a, b) -> a.SimpleName = "FSharp.Core")
     |> Seq.map (fun (l, r) -> l.Contents, r.Contents)
     |> Seq.iter compareAssemblySignatureWithItself
