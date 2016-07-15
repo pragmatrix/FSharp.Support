@@ -59,8 +59,14 @@
     <None Include="SignatureTestData_Records.fs_">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
+    <None Include="SignatureTestData_Internal.fs_">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
     <None Include="FSharp.Core.optdata" />
     <None Include="FSharp.Core.sigdata" />
+    <None Include="SignatureTestData_Public.fs_">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\LivePipes.FSharp\LivePipes.FSharp.fsproj">

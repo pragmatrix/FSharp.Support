@@ -6,6 +6,7 @@ open System.Diagnostics
 open FsUnit
 open Xunit
 open LivePipes.FSharp
+open LivePipes.FSharp.SignatureComparer
 
 type CompareCommand =
     | Equal
@@ -23,7 +24,7 @@ let makeCommand (str: string) =
     | [|a;b|] -> (NotEqual, a, b) |> CompareInstruction
     | _ -> failwithf "failed to find // == or // != in %A" str  
 
-let compare (CompareInstruction(cmd, a, b) as inst) = 
+let compare (filter: DeclarationFilter) (CompareInstruction(cmd, a, b)) = 
     
     let getSigFromFile file =
         let projectResults = parseAndCheckSingleFile file
@@ -37,37 +38,42 @@ let compare (CompareInstruction(cmd, a, b) as inst) =
     printfn "%A" cmd
     printfn "%A" (b.Trim())
 
-    let declarationFilter (path: SignatureComparer.Path) (declaration : SignatureComparer.Declaration) = 
-        let indent = String.replicate (path.Length) "  "
-        printfn "%sPath: %A:" indent path
-        printfn "%s%A" indent declaration
-        true
+    let declarationFilter (path: Path) (declaration : Declaration) =
+        if filter path declaration then 
+            let indent = String.replicate (path.Length) "  "
+            printfn "%sPath: %A:" indent path
+            printfn "%s%A" indent declaration
+            true
+        else
+            printfn "filtered: %A" declaration
+            false
 
-    let result = SignatureComparer.compareAssemblySignature { DeclarationFilter = declarationFilter } (sigA, sigB)
+    let result = compareAssemblySignature { DeclarationFilter = declarationFilter } (sigA, sigB)
     match cmd with
     | Equal -> result |> should be True
     | NotEqual -> result |> should be False
 
+let testFile filter fn = 
+    let testFile = File.ReadAllText fn
+    let compareInstructions = 
+        // normalize line endings and strip comments from lines beginning with "// --"
+        let preprocessed = 
+            testFile.Split([|"\n"|], StringSplitOptions.None)
+            |> Array.map(fun s -> s.TrimEnd())
+            |> Array.map(fun s -> if s.StartsWith("// --") then "// --" else s)
+            |> String.concat "\n"
+
+        preprocessed.Split([|"// --\n"|], StringSplitOptions.None)
+        |> Seq.filter (fun s -> s.Trim() <> "")
+        |> Seq.map makeCommand
+        |> Seq.toList
+
+    compareInstructions
+    |> List.iter (compare filter)
+
 [<Fact>]
 let runMiniTests() =
     clearCaches()
-
-    let testFile fn = 
-        let testFile = File.ReadAllText fn
-        let compareInstructions = 
-            // normalize line endings and strip comments from lines beginning with "// --"
-            let preprocessed = 
-                testFile.Split([|"\n"|], StringSplitOptions.None)
-                |> Array.map(fun s -> s.TrimEnd())
-                |> Array.map(fun s -> if s.StartsWith("// --") then "// --" else s)
-                |> String.concat "\n"
-
-            preprocessed.Split([|"// --\n"|], StringSplitOptions.None)
-            |> Seq.map makeCommand
-            |> Seq.toList
-
-        compareInstructions
-        |> List.iter compare
     
     [
         ""
@@ -76,7 +82,17 @@ let runMiniTests() =
         "_NamespacesAndModules"
     ]
     |> List.map (fun s -> "SignatureTestData" + s + ".fs_")
-    |> List.iter testFile
+    |> List.iter (testFile privateDeclarationFilter)
+
+[<Fact>]
+let runPublicFilterTests() =
+    clearCaches()
+    testFile publicDeclarationFilter "SignatureTestData_Public.fs_"
+
+[<Fact>]
+let runInternalFilterTests() =
+    clearCaches()
+    testFile internalDeclarationFilter "SignatureTestData_Internal.fs_"
 
 [<Fact>]
 let compareFSharpCoreSignature() =

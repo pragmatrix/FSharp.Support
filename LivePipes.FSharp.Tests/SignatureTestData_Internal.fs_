@@ -1,0 +1,66 @@
+﻿// -- private extension method is not considered
+type System.String with
+    member private x.X = ()
+// ==
+type System.String with
+    member private x.Y = ()
+// -- private DU is not considered
+type U = private | V
+// ==
+type U = private | W
+// -- private fields of a record are not considered
+type R = private { x: int }
+// ==
+type R = private { y: int }
+// -- internal member in internal module is considered
+module internal A
+let internal x = 10
+// !=
+module internal A
+let internal y = 10
+// -- private module is not considered
+module private A
+let x = 10
+// != 
+module private B
+let y = 10
+// -- public members of a internal class are considered
+type internal C() = 
+    member x.A = ()
+// !=
+type internal C() = 
+    member x.B = ()
+// -- internal members of a public are not considered
+type C() = 
+    member internal x.A = ()
+// !=
+type C() = 
+    member internal x.B = ()
+// -- internal are not considered
+type internal C() = 
+    class end
+// !=
+type internal D() = 
+    class end
+// -- internal module members are considered
+let internal x = 10
+// !=
+let internal y = 10
+// -- internal nested module is considered
+module A = 
+    module internal B = 
+        let x = 10
+// != 
+module A = 
+    module internal C = 
+        let x = 10
+// --
+// internal module
+module internal A
+let x = 0
+// !=
+module internal C
+let x = 0
+
+
+

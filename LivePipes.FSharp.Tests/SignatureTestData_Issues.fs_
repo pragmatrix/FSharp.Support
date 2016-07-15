@@ -1,4 +1,4 @@
-﻿// measure, different power exponent is currently wrongly considered equal
+﻿// -- measure, different power exponent is currently wrongly considered equal
 [<Measure>] type cm
 [<Measure>] type ml = cm^2
 // ==

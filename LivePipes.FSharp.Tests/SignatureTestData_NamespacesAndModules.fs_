@@ -1,4 +1,4 @@
-﻿// modulesuffix
+﻿// -- modulesuffix
 module X =
   type D = A of int
 // !=

@@ -1,4 +1,4 @@
-﻿// measure, newton, wrong defined
+﻿// -- measure, newton, wrong defined
 [<Measure>] type kg
 [<Measure>] type m
 [<Measure>] type s

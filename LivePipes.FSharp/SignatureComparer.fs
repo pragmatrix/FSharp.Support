@@ -10,9 +10,17 @@ type Declaration =
     | Member of FSharpMemberOrFunctionOrValue
     | UnionCase of FSharpUnionCase
     | Field of FSharpField
+    member x.Accessibility =
+        match x with
+        | Entity e -> e.Accessibility
+        | Member m -> m.Accessibility
+        | UnionCase uc -> uc.Accessibility
+        | Field f -> f.Accessibility
+
+type DeclarationFilter = Path -> Declaration -> bool
 
 type Visitor = {
-    DeclarationFilter: Path -> Declaration -> bool
+    DeclarationFilter: DeclarationFilter
 }
 
 [<AutoOpen>]
@@ -587,6 +595,7 @@ module private Implementation =
         unordered<FSharpEntity, _> (fun e -> e.CompiledName) compareEntity
         |> mayFilter Entity context
 
+/// Compares two assembly signature, returns true if they can be considered equal.
 let compareAssemblySignature (v : Visitor) : FSharpAssemblySignature comparer = 
     let c = { Visitor = v; CurrentPath = [] }
     let compareEntities = compareEntities c
@@ -594,3 +603,18 @@ let compareAssemblySignature (v : Visitor) : FSharpAssemblySignature comparer =
         nested (fun s -> s.Attributes) compareAttributes
         nested (fun s -> s.Entities) compareEntities
     ] 
+
+/// A filter that keeps only public declarations
+let publicDeclarationFilter : DeclarationFilter =
+    fun _ decl -> decl.Accessibility.IsPublic
+
+/// A filter that keeps public and internal declarations
+let internalDeclarationFilter : DeclarationFilter = 
+    fun _ decl -> 
+        let accessibility = decl.Accessibility
+        accessibility.IsPublic || accessibility.IsInternal
+
+/// A filter that returns public, internal, and private declarations.
+/// This filter always returns true.
+let privateDeclarationFilter : DeclarationFilter = 
+    fun _ _ -> true

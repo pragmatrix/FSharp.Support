@@ -1,4 +1,4 @@
-﻿// record with IDisposable
+﻿// -- record with IDisposable
 type R = { x: int }
   with
   interface System.IDisposable with
