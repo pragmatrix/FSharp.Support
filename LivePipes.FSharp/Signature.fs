@@ -2,6 +2,8 @@
 /// FSharp graphs.
 module LivePipes.FSharp.Signature
 
+#if false
+
 open System
 open System.Collections
 open System.Collections.Generic
@@ -481,7 +483,4 @@ let create visibility (checkedFile: FSharpImplementationFileContents) : Declarat
     |> List.choose (fromDeclaration visibility)
     |> LSet.ofList
 
-    
-
-
-
+#endif

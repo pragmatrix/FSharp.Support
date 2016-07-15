@@ -11,21 +11,20 @@ type CompareCommand =
     | Equal
     | NotEqual
 
-type CompareInst = CompareInst of CompareCommand * string * string
+type CompareInstruction = CompareInstruction of CompareCommand * string * string
 
 let makeCommand (str: string) = 
     let equal = str.Split([|"// ==\n"|], StringSplitOptions.None)
     match equal with
-    | [|a;b|] -> (Equal, a, b) |> CompareInst
+    | [|a;b|] -> (Equal, a, b) |> CompareInstruction
     | _ ->
     let notEqual = str.Split([|"// !=\n"|], StringSplitOptions.None)
     match notEqual with
-    | [|a;b|] -> (NotEqual, a, b) |> CompareInst
+    | [|a;b|] -> (NotEqual, a, b) |> CompareInstruction
     | _ -> failwithf "failed to find // == or // != in %A" str  
 
-let compare (CompareInst(cmd, a, b) as inst) = 
-    let accessibility = Signature.Public
-
+let compare (CompareInstruction(cmd, a, b) as inst) = 
+    
     let getSigFromFile file =
         let projectResults = parseAndCheckSingleFile file
         if projectResults.Errors.Length <> 0 then
@@ -80,7 +79,7 @@ let runMiniTests() =
     |> List.iter testFile
 
 [<Fact>]
-let compareDependenciesOfFSharpCore() =
+let compareFSharpCoreSignature() =
     clearCaches()
     let results1 = parseAndCheckSingleFile ""
     clearCaches()
