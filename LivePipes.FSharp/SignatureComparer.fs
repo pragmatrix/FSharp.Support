@@ -45,6 +45,8 @@ module private Implementation =
             (lseq |> Seq.filter f, rseq |> Seq.filter f)
             |> comparer 
 
+    let same = fun (l, r) -> true
+
     let nestedD get comparer = 
         fun (enclosingL, enclosingR) ->
             comparer() (get enclosingL, get enclosingR)
@@ -379,7 +381,25 @@ module private Implementation =
             nested (fun e -> e.LiteralValue) compare
             nested (fun e -> e.Accessibility) compareAccessibility
         ]
-    
+
+    type EntityType =
+        | Module
+        | Array
+        | ByRef
+        | Measure
+        | Enum
+        | Struct
+        | Interface
+        | Class
+        | FSharpDelegate
+        | Delegate
+        | Exception
+        | Abbrevation
+        | Record
+        | Union
+        | AssemblyCodeRepresented
+        | Opaque
+            
     let compareEntity (context: Context) : FSharpEntity comparer =
 
         let compareDelegateArgument : (string option * FSharpType) comparer =
@@ -426,7 +446,7 @@ module private Implementation =
                     (unordered (fun t -> t.TypeDefinition.CompiledName) compareType)
             ]
     
-        let mutable compareEntity = forAll []
+        let mutable compareEntity = same
 
         let compareNestedEntities : FSharpEntity seq comparer =
             unorderedD<FSharpEntity,_> (fun e -> e.CompiledName) (fun () -> compareEntity)
@@ -482,38 +502,82 @@ module private Implementation =
                 unordered<FSharpUnionCase, _> (fun uc -> uc.Name) compareCase
                 |> mayFilter UnionCase context
 
+            nested (fun e -> e.UnionCases) compareCases
+
+        let compareAbbreviation : FSharpEntity comparer = 
+            nested (fun e -> e.AbbreviatedType) compareType
+
+        let compareArray : FSharpEntity comparer =
+            nested (fun e -> e.ArrayRank) compare
+        
+        let compareMeasure : FSharpEntity comparer = 
             forAll [
-                nested (fun e -> e.UnionCases) compareCases
+                nestedIf (fun e -> e.IsFSharpAbbreviation) id compareAbbreviation
             ]
 
-        compareEntity <- forAll<FSharpEntity> [
-            nested (fun e -> e.Accessibility) compareAccessibility
+        let compareEnum : FSharpEntity comparer =
+            compareBaseType <&> compareEnumFields
+        
+        let compareStruct : FSharpEntity comparer =
+            compareMembers <&> compareDeclaredInterfaces
 
-            nested (fun e -> e.CompiledName) compare
+        let compareInterface : FSharpEntity comparer =
+            compareBaseType <&> compareDeclaredInterfaces <&> compareMembers
+
+        let compareClass : FSharpEntity comparer =
+            compareBaseType <&> compareDeclaredInterfaces <&> compareMembers
+
+        let compareFSharpDelegate : FSharpEntity comparer =
+            nested (fun e -> e.FSharpDelegateSignature) compareDelegateSignature
+    
+        let compareRecord : FSharpEntity comparer =
+            compareRecordFields <&> compareDeclaredInterfaces <&> compareMembers
+
+        let compareUnion : FSharpEntity comparer =
+            compareUnionCases <&> compareDeclaredInterfaces <&> compareMembers
+
+        let getTypeAndComparer (e: FSharpEntity) : EntityType * FSharpEntity comparer = 
+            match () with
+            | _ when e.IsFSharpModule -> Module, compareModule
+            | _ when e.IsArrayType -> Array, compareArray
+            | _ when e.IsByRef -> ByRef, same
+            | _ when e.IsMeasure -> Measure, compareMeasure
+            | _ when e.IsEnum -> Enum, compareEnum
+
+            | _ when e.IsFSharp && e.IsDelegate -> FSharpDelegate, compareFSharpDelegate
+            | _ when e.IsDelegate -> Delegate, same
+
+            | _ when e.IsValueType -> Struct, compareStruct
+            | _ when e.IsInterface -> Interface, compareInterface
+            | _ when e.IsClass -> Class, compareClass
+            | _ when e.IsFSharpExceptionDeclaration -> Exception, compareExceptionFields
+            | _ when e.IsFSharpAbbreviation -> Abbrevation, compareAbbreviation
+            | _ when e.IsFSharpRecord -> Record, compareRecord
+            | _ when e.IsFSharpUnion -> Union, compareUnion
+            // decimal`1 for example:
+            | _ when e.HasAssemblyCodeRepresentation -> AssemblyCodeRepresented, same
+            // "Microsoft.FSharp.Control.FSharpAsync"
+            | _ when e.IsOpaque -> Opaque, same
+            | _ -> failwithf "unsupported entity"
+
+        let compareByType : FSharpEntity comparer =
+            fun ((le, re) as es) ->
+                let etl = getTypeAndComparer le
+                let etr = getTypeAndComparer re
+                if (fst etl = fst etr) 
+                then es |> snd etl
+                else false
+
+        compareEntity <- forAll<FSharpEntity> [
             // don't need to compare the full name, because we have compared parents before,
             // also type abbrevations do not have a FullName
             // nested (fun e -> e.FullName) compare
-            nested (fun e -> e.GenericParameters) (compareGenericParameterDeclarations)
-            nestedIf (fun e -> e.IsFSharpModule) id compareModule
-            nestedIf (fun e -> e.IsArrayType) (fun e -> e.ArrayRank) compare
-            nested (fun e -> e.IsByRef) compare
-
-            nestedIf (fun e -> e.IsEnum) id (compareBaseType <&> compareEnumFields)
-            // ValueType is always set when IsEnum is true
-            nestedIf (fun e -> e.IsValueType) id (compareMembers <&> compareDeclaredInterfaces)
-
-            nestedIf (fun e -> e.IsDelegate && e.IsFSharp) (fun e -> e.FSharpDelegateSignature) compareDelegateSignature
-            nestedIf (fun e -> e.IsInterface) id (compareBaseType <&> compareDeclaredInterfaces <&> compareMembers)
-            nestedIf (fun e -> e.IsClass) id (compareBaseType <&> compareDeclaredInterfaces <&> compareMembers)
-
-            nested (fun e -> e.IsMeasure) compare
-            nestedIf (fun e -> e.IsFSharpExceptionDeclaration) id compareExceptionFields
-            nestedIf (fun e -> e.IsFSharpAbbreviation) (fun e -> e.AbbreviatedType) compareType
-
-            nestedIf (fun e -> e.IsFSharpRecord) id (compareRecordFields <&> compareDeclaredInterfaces <&> compareMembers)
-            nestedIf (fun e -> e.IsFSharpUnion) id (compareUnionCases <&> compareDeclaredInterfaces <&> compareMembers)
-
+            nested (fun e -> e.CompiledName) compare
+            nested (fun e -> e.Accessibility) compareAccessibility
             nested (fun e -> e.Attributes) compareAttributes
+            nested (fun e -> e.GenericParameters) (compareGenericParameterDeclarations)
+            compareByType
+
         ] |> scope context
 
         compareEntity

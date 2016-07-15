@@ -1,4 +1,14 @@
-﻿// includes private signatures by default
+﻿// measure, newton, wrong defined
+[<Measure>] type kg
+[<Measure>] type m
+[<Measure>] type s
+[<Measure>] type N = kg m / s 
+// !=
+[<Measure>] type kg
+[<Measure>] type m
+[<Measure>] type s
+[<Measure>] type N = kg m / kg
+// -- includes private signatures by default
 module private M =
     let x = 10
 // !=
@@ -110,16 +120,6 @@ let gramsPerKilogram : float<g kg^-1> = 1000.0<g/kg>
 [<Measure>] type s
 [<Measure>] type g
 let gramsPerKilogram : float<g kg^-1> = 1000.0<g/kg>
-// -- measure, newton, wrong defined
-[<Measure>] type kg
-[<Measure>] type m
-[<Measure>] type s
-[<Measure>] type N = kg m / s 
-// !=
-[<Measure>] type s
-[<Measure>] type m
-[<Measure>] type kg
-[<Measure>] type N = kg m / kg
 // -- measure, newton, ordered differently
 [<Measure>] type kg
 [<Measure>] type m
