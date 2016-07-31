@@ -10,11 +10,15 @@ type private Options = FSharpProjectOptions
 let OutputFilePrefix = "--out:"
 [<Literal>]
 let AssemblyReferencePrefix = "-r:"
-         
-let outputDirectory (options: Options) = 
+
+let outputFile (options: Options) = 
     options.OtherOptions
     |> Seq.find (fun str -> str.StartsWith(OutputFilePrefix))
     |> fun str -> str.Substring(OutputFilePrefix.Length)
+
+let outputDirectory (options: Options) = 
+    options
+    |> outputFile
     |> Path.GetDirectoryName
 
 let assemblyReferences (options: Options) =
