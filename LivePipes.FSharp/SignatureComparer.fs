@@ -48,12 +48,7 @@ module private Implementation =
             let filter = declConstructor >> filter path
             comparer (Seq.filter filter lseq, Seq.filter filter rseq)
 
-    let filter (f: 'a -> bool) (comparer: 'a seq comparer) : 'a seq comparer = 
-        fun (lseq, rseq) ->
-            (lseq |> Seq.filter f, rseq |> Seq.filter f)
-            |> comparer 
-
-    let same = fun (l, r) -> true
+    let same = fun (_, _) -> true
 
     let nestedD get comparer = 
         fun (enclosingL, enclosingR) ->
@@ -284,6 +279,7 @@ module private Implementation =
                     nested (fun (_, n , _, _) -> n) compare
                     nested (fun (_, _ , _, v) -> v) compare
                 ]
+
             let compareNamedArguments = 
                 unordered (fun (_, name, _, _)-> name) compareNamedArgument
 
