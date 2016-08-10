@@ -4,13 +4,13 @@ This repository contains some F# compiler services based support code that I am 
 
 ## What's in here?
 
-### Signature Comparer
+### Signature Comparer (SignatureComparer.fs)
 
-A signature comparer that compares F# assembly signatures based on the typed AST API. This used in the LivePipes project for an incremental compilation F# strategy.
+A signature comparer that compares F# assembly signatures based on the typed AST API. This used in the LivePipes project for supporting an incremental compilation strategy.
 
-### FSharpCompilerOptions wrapper
+### FSharpProjectOptions wrapper (ProjectOptions.fs)
 
-A FSharpCompilerOptions wrapper and some support functions.
+A simple FSharpProjectOptions wrapper and some support functions.
 
 ### Unfinished F# idiomatic signature declarations
 
