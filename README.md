@@ -1,4 +1,6 @@
-# F# support code for the LivePipes project I am working at.
+# F# compiler services support code
+
+This repository contains some F# compiler services based support code that I am using in the LivePipes project. Feel free to use it and throwing PRs at it.
 
 ## What's in here?
 
