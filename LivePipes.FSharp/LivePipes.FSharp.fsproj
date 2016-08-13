@@ -63,6 +63,7 @@
     <Compile Include="SignatureFormatter.fs" />
     <Compile Include="SignatureRenderer.fs" />
     <Compile Include="ProjectOptions.fs" />
+    <Compile Include="ASTTools.fs" />
     <None Include="paket.references" />
   </ItemGroup>
   <ItemGroup>
