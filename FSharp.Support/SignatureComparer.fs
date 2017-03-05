@@ -1,4 +1,4 @@
-﻿module LivePipes.FSharp.SignatureComparer
+﻿module FSharp.Support.SignatureComparer
 
 open System.Collections.Generic
 open Microsoft.FSharp.Compiler.SourceCodeServices

@@ -1,4 +1,4 @@
-﻿namespace LivePipes.FSharp
+﻿namespace FSharp.Support
 
 open System
 open System.IO

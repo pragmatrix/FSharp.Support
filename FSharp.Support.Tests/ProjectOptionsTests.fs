@@ -2,7 +2,7 @@
 
 open FsUnit
 open Xunit
-open LivePipes.FSharp
+open FSharp.Support
 
 [<Fact>]
 let projectOptionsCanBeConvertedToFSharpOptionsAndBackWithoutLosingInformation() =

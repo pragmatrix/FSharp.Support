@@ -6,7 +6,7 @@ open System
 open System.IO
 open FsUnit
 open Xunit
-open LivePipes.FSharp
+open FSharp.Support
 
 [<Fact>]
 let testFormatting() = 

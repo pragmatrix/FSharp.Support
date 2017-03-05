@@ -1,6 +1,6 @@
 ﻿/// This module generates comparable compilation unit signatures based on typed
 /// FSharp graphs.
-module LivePipes.FSharp.Signature
+module FSharp.Support.Signature
 
 #if false
 

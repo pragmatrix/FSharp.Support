@@ -5,8 +5,8 @@ open System.IO
 open System.Diagnostics
 open FsUnit
 open Xunit
-open LivePipes.FSharp
-open LivePipes.FSharp.SignatureComparer
+open FSharp.Support
+open FSharp.Support.SignatureComparer
 
 type CompareCommand =
     | Equal

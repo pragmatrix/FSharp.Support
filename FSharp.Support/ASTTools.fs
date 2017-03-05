@@ -1,5 +1,5 @@
 ﻿/// Tools for the untyped AST
-module LivePipes.FSharp.ASTTools
+module FSharp.Support.ASTTools
 
 open Microsoft.FSharp.Compiler.Ast
 

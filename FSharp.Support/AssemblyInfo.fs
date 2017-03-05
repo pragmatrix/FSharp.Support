@@ -1,13 +1,13 @@
-﻿namespace LivePipes.FSharp.AssemblyInfo
+﻿namespace FSharp.Support.AssemblyInfo
 
 open System.Reflection
 open System.Runtime.InteropServices
 
-[<assembly: AssemblyTitle("LivePipes.FSharp")>]
+[<assembly: AssemblyTitle("FSharp.Support")>]
 [<assembly: AssemblyDescription("")>]
 [<assembly: AssemblyConfiguration("")>]
 [<assembly: AssemblyCompany("")>]
-[<assembly: AssemblyProduct("LivePipes.FSharp")>]
+[<assembly: AssemblyProduct("FSharp.Support")>]
 [<assembly: AssemblyCopyright("Copyright © 2016 Armin Sander")>]
 [<assembly: AssemblyTrademark("")>]
 [<assembly: AssemblyCulture("")>]

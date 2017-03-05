@@ -3,9 +3,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
 VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "LivePipes.FSharp", "LivePipes.FSharp\LivePipes.FSharp.fsproj", "{25018155-03AA-4FBF-8517-72646AB5C404}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharp.Support", "FSharp.Support\FSharp.Support.fsproj", "{25018155-03AA-4FBF-8517-72646AB5C404}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "LivePipes.FSharp.Tests", "LivePipes.FSharp.Tests\LivePipes.FSharp.Tests.fsproj", "{CA39465B-04E8-4311-8479-CCF5D8AE8623}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "FSharp.Support.Tests", "FSharp.Support.Tests\FSharp.Support.Tests.fsproj", "{CA39465B-04E8-4311-8479-CCF5D8AE8623}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Paket", "Paket", "{599B6AF3-2E50-48C4-BF74-EA5A410A9A27}"
 	ProjectSection(SolutionItems) = preProject

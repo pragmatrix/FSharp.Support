@@ -1,8 +1,8 @@
-﻿module LivePipes.FSharp.SignatureFormatter
+﻿module FSharp.Support.SignatureFormatter
 
 #if false
 
-open LivePipes.FSharp.Signature
+open FSharp.Support.Signature
 
 type Context = {
     Path: EntitySignature list

@@ -1,8 +1,8 @@
-﻿module LivePipes.FSharp.SignatureRenderer
+﻿module FSharp.Support.SignatureRenderer
 
 #if false
 
-open LivePipes.FSharp.SignatureFormatter
+open FSharp.Support.SignatureFormatter
 
 type StringFormattingStyle = {
     SpacesPerIndentLevel: int
