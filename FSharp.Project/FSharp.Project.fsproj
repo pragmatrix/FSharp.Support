@@ -21,7 +21,7 @@
     <Optimize>false</Optimize>
     <Tailcalls>false</Tailcalls>
     <OutputPath>bin\$(Configuration)\</OutputPath>
-    <DefineConstants>TRACE;DEBUG;NETSTANDARD1_6</DefineConstants>
+    <DefineConstants>TRACE;DEBUG;NETSTANDARD1_6;DOTNETCORE</DefineConstants>
     <WarningLevel>3</WarningLevel>
     <DocumentationFile>bin\$(Configuration)\$(AssemblyName).XML</DocumentationFile>
   </PropertyGroup>
@@ -30,7 +30,7 @@
     <Optimize>true</Optimize>
     <Tailcalls>true</Tailcalls>
     <OutputPath>bin\$(Configuration)\</OutputPath>
-    <DefineConstants>TRACE;NETSTANDARD1_6</DefineConstants>
+    <DefineConstants>TRACE;NETSTANDARD1_6;DOTNETCORE</DefineConstants>
     <WarningLevel>3</WarningLevel>
     <DocumentationFile>bin\$(Configuration)\$(AssemblyName).XML</DocumentationFile>
   </PropertyGroup>
