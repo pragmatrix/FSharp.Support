@@ -2,3 +2,6 @@ source https://www.nuget.org/api/v2
 nuget FSharp.Compiler.Service
 nuget FSharp.Core redirects:on
 nuget FsUnit.xUnit
+nuget Microsoft.Build
+nuget Microsoft.Build.Engine
+nuget Microsoft.Build.Utilities.Core
