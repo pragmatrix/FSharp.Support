@@ -70,5 +70,7 @@ module ProjectOptions =
             UseScriptResolutionRules = false
             LoadTime = DateTime.Now
             UnresolvedReferences = None
+            OriginalLoadReferences = []
+            ExtraProjectInfo = None
         }
         

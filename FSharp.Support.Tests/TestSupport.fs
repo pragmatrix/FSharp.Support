@@ -11,8 +11,10 @@ let projectOptions =
 
     File.WriteAllText(file, "")
     // Get context representing a stand-alone (script) file
+    
     checker.GetProjectOptionsFromScript(file, "Main.fsx")
     |> Async.RunSynchronously
+    |> fst
 
 let parseAndCheckSingleFile input = 
     let po = projectOptions
