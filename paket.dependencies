@@ -5,3 +5,4 @@ nuget FsUnit.xUnit
 nuget Microsoft.Build
 nuget Microsoft.Build.Engine
 nuget Microsoft.Build.Utilities.Core
+nuget System.ValueTuple
